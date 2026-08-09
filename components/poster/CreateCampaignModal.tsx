@@ -440,7 +440,7 @@ export default function CreateCampaignModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Tech Literacy</label>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">Target Tech Literacy</label>
                     <select
                       value={targetTechLiteracy}
                       onChange={e => setTargetTechLiteracy(e.target.value)}
@@ -613,7 +613,7 @@ export default function CreateCampaignModal({
                   Next
                 </button>
               ) : (
-                <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-sm font-semibold shadow-sm disabled:opacity-50 flex items-center gap-2">
+                <button type="submit" onClick={handleSubmit} disabled={isSubmitting} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-sm font-semibold shadow-sm disabled:opacity-50 flex items-center gap-2">
                   {isSubmitting ? 'Funding...' : 'Confirm and Fund'}
                 </button>
               )}

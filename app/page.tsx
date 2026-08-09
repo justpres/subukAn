@@ -589,7 +589,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate">
           <div className="flex items-center space-x-3">
             <img src="/subukanlogoweb.png" alt="subukAn Logo" className="h-8 w-auto object-contain opacity-80" />
-            <span>&copy; {new Date().getFullYear()}</span>
+            <span>&copy; {new Date().getFullYear()} subukAn. Created by <a href="https://github.com/justpres" target="_blank" rel="noopener noreferrer" className="hover:text-ink font-semibold transition-colors">Justine Lopez (@justpres)</a>.</span>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
             {!loading && (

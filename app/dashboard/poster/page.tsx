@@ -32,6 +32,7 @@ function PosterDashboardContent() {
   const [user, setUser] = useState<any>(null)
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
   
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -98,6 +99,7 @@ function PosterDashboardContent() {
       setLoadingError(sanitizeDatabaseError(err, 'Failed to retrieve listings.'))
     } finally {
       setLoading(false)
+      setIsInitialLoad(false)
     }
   }, [supabase])
 
@@ -204,7 +206,7 @@ function PosterDashboardContent() {
     }
   }
 
-  if (loading) {
+  if (loading && isInitialLoad) {
     return (
       <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] flex items-center justify-center p-8">
         <div className="text-center space-y-4">

@@ -158,6 +158,7 @@ function TesterDashboardContent() {
   const [submissions, setSubmissions] = useState<SubmissionRecord[]>(DEFAULT_SUBMISSIONS)
   const [payouts, setPayouts] = useState<PayoutRecord[]>(DEFAULT_PAYOUTS)
   const [loading, setLoading] = useState(true)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
   const totalEarnedValue = withdrawableBalance + payouts
     .filter(p => p.status === 'completed')
@@ -417,6 +418,7 @@ function TesterDashboardContent() {
       setLoadingError(sanitizeDatabaseError(err, 'An error occurred.'))
     } finally {
       setLoading(false)
+      setIsInitialLoad(false)
     }
   }, [supabase])
 
@@ -558,7 +560,7 @@ function TesterDashboardContent() {
     setImageUploaded(false)
   }
 
-  if (loading) {
+  if (loading && isInitialLoad) {
     return (
       <div className="min-h-screen bg-[#fcfcfc] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -610,7 +612,38 @@ function TesterDashboardContent() {
             </button>
           </div>
 
-
+          <div className="flex gap-2 border-b border-slate-200 pb-4">
+            <button
+              onClick={() => switchTab('available')}
+              className={`px-4 py-2 text-sm font-semibold rounded-[8px] transition-colors ${
+                activeTab === 'available'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Available Tests
+            </button>
+            <button
+              onClick={() => switchTab('submissions')}
+              className={`px-4 py-2 text-sm font-semibold rounded-[8px] transition-colors ${
+                activeTab === 'submissions'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              My Submissions
+            </button>
+            <button
+              onClick={() => switchTab('earnings')}
+              className={`px-4 py-2 text-sm font-semibold rounded-[8px] transition-colors ${
+                activeTab === 'earnings'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Earnings & Payout History
+            </button>
+          </div>
 
           {/* Tab 1: Available Tests (Linear-Style List Rows) */}
           {activeTab === 'available' && (

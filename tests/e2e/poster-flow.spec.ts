@@ -30,29 +30,40 @@ test.describe('Poster Flow E2E', () => {
       'This is a long mock description that contains at least twenty characters to satisfy schema validation rules.'
     );
 
+    // Proceed to Step 2: Rate & Slots
+    await page.click('button:has-text("Next")');
+
     // Select Rate per Tester (e.g. 200)
     await page.selectOption('select:has-text("per tester")', '200');
 
     // Fill slots
-    await page.fill('label:has-text("Slots Count") + input[type="number"]', '5');
+    await page.fill('input[type="number"]', '5');
 
-    // Check "5-Second Quick Impression Test" (first checkbox in form)
-    await page.locator('input[type="checkbox"]').first().check();
-
-    // Enable A/B Comparative Testing (second checkbox in form) and fill variant URLs
-    await page.locator('input[type="checkbox"]').nth(1).check();
-    // Skip the Site URL field (first url input) — variant URLs are the 2nd and 3rd
-    await page.locator('input[type="url"]').nth(1).fill('https://variant-a.example.com');
-    await page.locator('input[type="url"]').nth(2).fill('https://variant-b.example.com');
-
-    // Add accessibility requirements (fourth checkbox in form)
-    await page.locator('input[type="checkbox"]').nth(3).check();
+    // Proceed to Step 3: Target Demographics
+    await page.click('button:has-text("Next")');
 
     // Select Demographic filters: Tech Literacy and Age Group
     // Age Group: 25-34 years old
     await page.selectOption('label:has-text("Target Age Group") + select', '25-34');
     // Tech Literacy: Non-Technical
     await page.selectOption('label:has-text("Target Tech Literacy") + select', 'non_technical');
+
+    // Add accessibility requirements (Requires Screen Reader - which is index 0 checkbox on step 3)
+    await page.locator('input[type="checkbox"]').first().check();
+
+    // Proceed to Step 4: Verification Questions
+    await page.click('button:has-text("Next")');
+
+    // Check "5-Second Quick Impression Test"
+    await page.locator('input[type="checkbox"]').nth(2).check();
+
+    // Enable A/B Comparative Testing and fill variant URLs
+    await page.locator('input[type="checkbox"]').nth(3).check();
+    await page.locator('input[type="url"]').nth(0).fill('https://variant-a.example.com');
+    await page.locator('input[type="url"]').nth(1).fill('https://variant-b.example.com');
+
+    // Proceed to Step 5: Escrow Confirm
+    await page.click('button:has-text("Next")');
 
     // Click Confirm and Fund
     await page.click('button[type="submit"]:has-text("Confirm and Fund")');
