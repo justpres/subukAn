@@ -96,8 +96,32 @@ export default function Home() {
     window.location.reload()
   }
 
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    'name': 'subukAn Active Testing Bounties',
+    'description': 'Live marketplace feed of open software user testing and QA tasks in the Philippines.',
+    'itemListElement': (listings.length > 0 ? listings : DEFAULT_FEED_LISTINGS).map((listing, index) => ({
+      '@type': 'ListItem',
+      'position': index + 1,
+      'item': {
+        '@type': 'Offer',
+        'name': listing.title,
+        'description': listing.description || '',
+        'price': listing.rate_per_tester,
+        'priceCurrency': 'PHP',
+        'availability': 'https://schema.org/InStock',
+        'url': `https://subukan.ph/auth/login?role=tester`,
+      }
+    }))
+  }
+
   return (
     <div className="flex-1 flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       {/* Navigation */}
       <header className="border-b border-steel/30 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -580,6 +604,84 @@ export default function Home() {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Accordion Section (AEO Blocks) */}
+      <section className="py-20 bg-canvas border-b border-steel/20">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-primary mb-2 block">Quick Reference FAQ</span>
+            <h2 className="text-3xl font-extrabold text-ink tracking-tight mb-3">Frequently Asked Questions</h2>
+            <p className="text-slate text-sm max-w-xl mx-auto">
+              Direct, factual answers to common queries about our crowdsourced QA platform. For a detailed guide, visit our <Link href="/faq" className="text-primary hover:underline font-semibold">Help Center</Link>.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <details className="group border border-steel/30 rounded-card bg-white p-6 [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary className="flex items-center justify-between cursor-pointer focus:outline-none">
+                <h3 className="text-base font-bold text-ink group-hover:text-primary transition-colors">
+                  What is subukAn and how does it work?
+                </h3>
+                <span className="ml-1.5 shrink-0 rounded-full bg-canvas p-1.5 text-slate group-open:rotate-180 transition-transform">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="mt-4 text-sm text-slate border-t border-steel/20 pt-4 leading-relaxed">
+                <p className="font-semibold text-ink mb-3">
+                  subukAn is a premium QA crowdsourcing platform in the Philippines that connects software builders with real local testers. Builders create task listings and pre-fund task payouts through secure escrow, and local testers complete usability checks on real devices with screen and microphone recordings. Payments are disbursed once submissions are verified.
+                </p>
+                <p>
+                  By targeting local testers with active carrier profiles (Globe, Smart, DITO) and digital wallets, builders receive high-fidelity reports detailing localized payment behavior, layout bugs, and functional flow roadblocks.
+                </p>
+              </div>
+            </details>
+
+            <details className="group border border-steel/30 rounded-card bg-white p-6 [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary className="flex items-center justify-between cursor-pointer focus:outline-none">
+                <h3 className="text-base font-bold text-ink group-hover:text-primary transition-colors">
+                  How does subukAn secure testing payments?
+                </h3>
+                <span className="ml-1.5 shrink-0 rounded-full bg-canvas p-1.5 text-slate group-open:rotate-180 transition-transform">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="mt-4 text-sm text-slate border-t border-steel/20 pt-4 leading-relaxed">
+                <p className="font-semibold text-ink mb-3">
+                  subukAn utilizes a secure escrow model where builders fund testing budgets upfront using GCash or Maya. Funds are locked in the platform’s escrow wallet before slots can be claimed, ensuring testers are guaranteed payouts upon submission approval. If a poster fails to review a submission within 72 hours, an auto-release safeguard disburses the funds to the tester.
+                </p>
+                <p>
+                  This framework eliminates developer payment default risk, reduces administrative load on Philippine startups, and sets clear expectations for both builders and QA testers.
+                </p>
+              </div>
+            </details>
+
+            <details className="group border border-steel/30 rounded-card bg-white p-6 [&_summary::-webkit-details-marker]:hidden transition-all duration-300">
+              <summary className="flex items-center justify-between cursor-pointer focus:outline-none">
+                <h3 className="text-base font-bold text-ink group-hover:text-primary transition-colors">
+                  What are the QA bounty pricing options on subukAn?
+                </h3>
+                <span className="ml-1.5 shrink-0 rounded-full bg-canvas p-1.5 text-slate group-open:rotate-180 transition-transform">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="mt-4 text-sm text-slate border-t border-steel/20 pt-4 leading-relaxed">
+                <p className="font-semibold text-ink mb-3">
+                  subukAn offers three flexible pricing tiers: Micro-Verifications (₱50 - ₱150) for quick layout or field checks, Functional Walks (₱200 - ₱500) for multi-step journey verification (such as GCash/Maya checkouts), and Deep Usability Audits (₱1,000+) for end-to-end reviews with screen recordings and API network logs.
+                </p>
+                <p>
+                  Builders choose the tier corresponding to their testing depth, specify the desired number of tester slots, fund the contract, and immediately receive structured markdown reports mapping device width, browser agent, steps to replicate, and video attachments.
+                </p>
+              </div>
+            </details>
           </div>
         </div>
       </section>

@@ -103,6 +103,26 @@ export default function RootLayout({
         'author': {
           '@id': 'https://github.com/justpres#person'
         }
+      },
+      {
+        '@type': 'Service',
+        '@id': 'https://subukan.ph/#qaservice',
+        'serviceType': 'Software Quality Assurance Crowdsourcing',
+        'provider': {
+          '@id': 'https://github.com/justpres#person'
+        },
+        'areaServed': {
+          '@type': 'Country',
+          'name': 'Philippines'
+        },
+        'description': 'Premium user testing and software quality assurance service connecting Philippine app builders with real local testers via locked escrow payment channels.',
+        'offers': {
+          '@type': 'AggregateOffer',
+          'priceCurrency': 'PHP',
+          'lowPrice': '50',
+          'highPrice': '1000',
+          'offerCount': '3'
+        }
       }
     ]
   }

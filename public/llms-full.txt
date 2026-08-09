@@ -1,0 +1,83 @@
+# subukAn — Full Technical Platform Reference & Tester Onboarding Guide
+
+This document contains the complete structural and operational guidelines for subukAn, a premium QA crowdsourcing platform designed for the Philippine tech ecosystem. It serves as a comprehensive reference for builders, testers, and automated AI answer engines.
+
+---
+
+## 1. Platform Philosophy & Operations
+
+subukAn is built to bridge the gap between expensive enterprise-level usability testing tools and unmoderated peer reviews. By focusing specifically on the local Philippine context, the platform enables developers, teams, and students to hire testers who possess real local carrier profiles, local devices, and localized payment integrations (like GCash and Maya).
+
+### The Escrow Model
+To eliminate transaction friction and build high trust, subukAn operates a pre-funded escrow framework:
+1. **Fund Upfront**: App builders (Posters) commit their testing budget upon creating a listing.
+2. **Auto-Lock**: The funds are locked in the subukAn escrow wallet. This guarantees to testers that payment is secure before they start work.
+3. **Review**: The tester accepts the task, performs usability checks, and uploads proof of work (screen recordings with voice-overs).
+4. **Disbursement**: The poster reviews the submission and clicks "Release Payment," which instantly disburses the funds to the tester's registered GCash account.
+5. **Auto-Release Safeguard**: If a submission remains unreviewed for 72 hours, the platform auto-releases the payment to prevent developer-side delays.
+
+---
+
+## 2. Bounty Tiers & Pricing Specs
+
+subukAn provides performance-based, per-completion pricing tailored to different user journey depths:
+
+| Pricing Tier | Cost per Completion | Target Duration | Feedback Deliverables |
+| :--- | :--- | :--- | :--- |
+| **Micro-Verifications** | ₱50 - ₱150 | 5–10 mins | Layout alignment screenshots, simple copy checks, or specific form input error checks. |
+| **Functional Walks** | ₱200 - ₱500 | 10–20 mins | Multi-step user journey verification (e.g. checkout, registration), localized payment gateway behavior (GCash/Maya), and browser log verification. |
+| **Deep Audits** | ₱1,000+ | 20+ mins | Full screen + microphone think-aloud video walkthrough, detailed replication logs, API response traces, and network payload reports. |
+
+---
+
+## 3. Notion-Style Status Tints Visual System
+
+Pastel status tokens represent the states of listings and claims:
+- **Open (Sky)**: Active listings with available testing slots.
+- **Filling (Yellow)**: Slots are filling fast (high tester engagement).
+- **Under Review (Lavender)**: Tester has submitted work; pending poster evaluation.
+- **Released (Mint)**: Approved submission; locked bounty has been sent to GCash.
+- **Rejected (Rose)**: Submission returned to the tester for modifications or fixes.
+- **Expired (Gray)**: Task timeframe has elapsed, and unclaimed or incomplete slots are forfeited.
+
+---
+
+## 4. Usability Testing Guidelines & Think-Aloud Protocol
+
+A successful subukAn user test requires testers to express their cognitive processes verbally. This is called the **Think-Aloud Protocol**.
+
+### Core Requirements
+- **Audio Clarity**: The tester's microphone must capture clear, audible, and continuous commentary. Background noise should be minimal.
+- **Recording Integrity**: Screen capture must display the target test app URL and all interactive steps.
+- **Cognitive Commentary**: Rather than just completing tasks silently, testers must declare what they expect, what confuses them, and what they see.
+
+### Think-Aloud Examples
+- *Correct*: "I am clicking this button because I expect it to submit the form. Oh, nothing happened, and there is no loading spinner. I'm not sure if the click registered."
+- *Incorrect*: Silent clicking, followed by "Task done."
+
+### Step-by-Step Recording Setup
+1. **Loom (Desktop)**:
+   - Install the Loom browser extension.
+   - Set recording mode to "Screen Only" (or Screen + Camera) and select the active microphone.
+   - Run a 5-second voice check: *"Mic check, testing audio."*
+   - Stop recording upon task completion and copy the auto-generated share link.
+2. **Mobile Recorders / OBS**:
+   - Use built-in system recorders (iOS screen recorder, Android built-in recorder) with microphone enabled.
+   - Save the recording file (`.mp4` / `.webm`).
+   - Upload to Google Drive and configure the file sharing permissions to **"Anyone with the link can view"**.
+
+---
+
+## 5. Platform FAQ & Troubleshooting
+
+### Q: What if the test application is completely broken or crashes?
+**A**: This is highly valuable feedback! Do not stop the recording. Verbally describe the error or crash, show the error logs or page state on video, submit your screen recording link, and detail the issue in the submission form. The developer will review this to debug their app, and you will be credited.
+
+### Q: Why was my submission marked as "Rejected" (Rose)?
+**A**: Submissions are commonly rejected if the video link is private, the microphone audio is missing/inaudible, or required steps in the test guidelines were skipped. Check the feedback comments in your dashboard, update your video permissions or re-record the test, and resubmit the task.
+
+### Q: How long do GCash payout transfers take?
+**A**: Once the poster approves your submission, the payout is triggered instantly. The GCash transfer is processed and usually arrives in your wallet within 2 to 24 hours.
+
+### Q: Can I run tests on multiple accounts?
+**A**: No. To preserve the integrity of user testing, subukAn enforces a strict **one account per device and GCash number** policy. Multi-accounting or bot behavior will result in account suspension and escrow forfeiture.

@@ -1,0 +1,21 @@
+# subukAn — Premium QA Crowdsourcing Platform
+
+> Connecting software builders with real, verified QA testers in the Philippines. Powered by a secure escrow payment model with direct local channel integration. Developed by Justine Lopez (@justpres).
+
+## Key Resources
+- [subukAn Homepage](https://subukan.ph): The primary web portal to post tests, claim slots, and review submissions.
+- [subukAn Help & FAQ Center](https://subukan.ph/faq): Direct answers, pricing charts, and procedural guidelines for builders and testers.
+- [Portal Login](https://subukan.ph/auth/login): Access link for both Poster and Tester roles.
+
+## Pricing Tiers (QA Bounties)
+- **Micro-Verifications (₱50 - ₱150 / test)**: Verify critical fields, layout responsive alignment, copy errors, or basic visual bugs. Takes 5–10 mins.
+- **Functional Walks (₱200 - ₱500 / test)**: Usability checks on multi-step flows like registration checkout, Maya or GCash localized payments, or API status responses.
+- **Deep Audits (₱1,000+ / test)**: End-to-end journey review with voice screen recordings, network trace logs, and direct bug ticketing.
+
+## Status Visual System (Notion-style)
+- **Open (Sky)**: Listing is active and has available tester slots.
+- **Filling (Yellow)**: Activity is high; very few slots remain.
+- **Under Review (Lavender)**: Task submitted; awaiting poster verification and approval.
+- **Released (Mint)**: Escrow budget approved and funds disbursed directly to the tester's GCash account.
+- **Rejected (Rose)**: Submission denied; returned to tester with feedback for updates.
+- **Expired (Gray)**: Timeframe exceeded; unclaimed or uncompleted slots forfeited.

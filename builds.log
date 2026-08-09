@@ -34,4 +34,5 @@
 [2026-08-07 19:50:00] Build/Lint/Test/E2E Successful - Aligned styling to Design System v0.2, synced primary color to #2955E3, created flat balance/escrow cards, enforced 8px rectangular button geometry, and set standard cards to 12px.
 [2026-08-09 15:32:00] Build/Lint/Test/E2E Successful - Extracted multi-step Campaign Modal wizard, decoupled background data reloading from initial fullscreen page mounts to avoid flash unmounts, restored horizontal tab switchers for Tester/Poster workspace routing & E2E compatibility, and integrated creator SEO structured JSON-LD meta-attribution for '@justpres'. All 4 Playwright E2E tests are 100% green.
 [2026-08-09 16:17:00] Build/Lint/Test/E2E Successful - Added rich Open Graph protocol meta properties, matching Twitter card tags, and a stunning custom branding social cover preview graphic.
-
+[2026-08-09 16:39:00] Build/Lint Successful - Updated geo-targeting metadata from Manila to Bacoor, Cavite (PH-CAV) with correct coordinates.
+[2026-08-09 22:17:00] Build/Lint/Test Successful - Implemented Answer Engine Optimisation (AEO) strategy: created public/llms.txt & public/llms-full.txt roadmaps, dynamic app/robots.ts & app/sitemap.ts, enriched layout.tsx JSON-LD graph with Service representation, and built a dedicated /faq Help route and home FAQ accordion optimized for AI direct-answer queries.
