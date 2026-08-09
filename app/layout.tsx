@@ -20,10 +20,10 @@ export const metadata: Metadata = {
   creator: 'Justine Lopez (@justpres)',
   publisher: 'Justine Lopez',
   other: {
-    'geo.region': 'PH',
-    'geo.placename': 'Manila',
-    'geo.position': '14.599512;120.984222',
-    'ICBM': '14.599512, 120.984222',
+    'geo.region': 'PH-CAV',
+    'geo.placename': 'Bacoor, Cavite',
+    'geo.position': '14.462400;120.964500',
+    'ICBM': '14.462400, 120.964500',
   },
   icons: {
     icon: '/subukantabico.ico',
