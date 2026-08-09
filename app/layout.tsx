@@ -34,14 +34,23 @@ export const metadata: Metadata = {
     description: 'Connecting builders with expert QA testers in the Philippines. Developed by Justine Lopez (@justpres).',
     url: 'https://subukan.ph',
     siteName: 'subukAn',
-    type: 'profile',
+    type: 'website',
     locale: 'en_PH',
+    images: [
+      {
+        url: 'https://subukan.ph/subukan_og_cover.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'subukAn QA Crowdsourcing Platform - Premium Crowd QA Testing in the Philippines',
+      }
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'subukAn - QA Platform by Justine Lopez (@justpres)',
-    description: 'Connecting builders with expert QA testers in the Philippines. developed by Justine Lopez (@justpres).',
+    description: 'Connecting builders with expert QA testers in the Philippines. Developed by Justine Lopez (@justpres).',
     creator: '@justpres',
+    images: ['https://subukan.ph/subukan_og_cover.jpg'],
   }
 }
 

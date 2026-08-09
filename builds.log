@@ -33,3 +33,5 @@
 [2026-08-07 18:57:00] Build/Lint/Test/E2E Successful - Redesigned entire dashboard shell with ambient mesh gradients and glassmorphism, Wise-inspired wallet cards, golden microchips on Escrow heroes, Linear rows, pulsing indicator dots, and corrected spec timeouts.
 [2026-08-07 19:50:00] Build/Lint/Test/E2E Successful - Aligned styling to Design System v0.2, synced primary color to #2955E3, created flat balance/escrow cards, enforced 8px rectangular button geometry, and set standard cards to 12px.
 [2026-08-09 15:32:00] Build/Lint/Test/E2E Successful - Extracted multi-step Campaign Modal wizard, decoupled background data reloading from initial fullscreen page mounts to avoid flash unmounts, restored horizontal tab switchers for Tester/Poster workspace routing & E2E compatibility, and integrated creator SEO structured JSON-LD meta-attribution for '@justpres'. All 4 Playwright E2E tests are 100% green.
+[2026-08-09 16:17:00] Build/Lint/Test/E2E Successful - Added rich Open Graph protocol meta properties, matching Twitter card tags, and a stunning custom branding social cover preview graphic.
+
