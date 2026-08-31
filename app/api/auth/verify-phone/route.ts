@@ -244,8 +244,12 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // 4. Validate matching code
-    if (entry.code !== code) {
+    // 4. Validate matching code using timing-safe comparison
+    const codeBuffer = Buffer.from(code);
+    const entryBuffer = Buffer.from(entry.code);
+    const isMatch = codeBuffer.length === entryBuffer.length && crypto.timingSafeEqual(codeBuffer, entryBuffer);
+
+    if (!isMatch) {
       entry.attempts += 1;
       
       if (entry.attempts >= 3) {

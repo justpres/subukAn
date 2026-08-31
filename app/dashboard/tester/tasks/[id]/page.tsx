@@ -324,27 +324,8 @@ export default function TaskWorkspacePage() {
             return;
           }
           
-          // Claim slot immediately on page load
-          const { data: newSubmission, error: claimErr } = await supabase
-            .from('submissions')
-            .insert({
-              listing_id: id,
-              tester_id: userId,
-              status: 'in_progress',
-              started_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-             
-          if (claimErr || !newSubmission) {
-            setError(sanitizeDatabaseError(claimErr, 'Failed to claim slot. Please try again.'));
-            setCurrentStep('error');
-            setLoading(false);
-            return;
-          }
-          
-          setSubmission(newSubmission);
-          setCurrentStep('agreement'); // Show click-through NDA
+          // Show click-through NDA before claiming slot
+          setCurrentStep('agreement');
           if (tasksData.length > 0) {
             setActiveTaskId(tasksData[0].id);
           }
@@ -420,8 +401,57 @@ export default function TaskWorkspacePage() {
   }, [currentStep]);
 
   // NDA modal handlers
-  const handleAcceptAgreement = () => {
-    setCurrentStep('active_task');
+  const handleAcceptAgreement = async () => {
+    if (submission) {
+      setCurrentStep('active_task');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id || !listing) {
+        setCurrentStep('unauthorized');
+        return;
+      }
+
+      // Re-verify slot availability atomically
+      const { count, error: countErr } = await supabase
+        .from('submissions')
+        .select('*', { count: 'exact', head: true })
+        .eq('listing_id', listing.id)
+        .neq('status', 'expired');
+
+      if (countErr) throw countErr;
+      if (count !== null && count >= listing.slots_count) {
+        setError('No slots available for this listing. All slots have been claimed.');
+        setCurrentStep('error');
+        return;
+      }
+
+      // Insert submission slot upon agreement acceptance
+      const { data: newSubmission, error: claimErr } = await supabase
+        .from('submissions')
+        .insert({
+          listing_id: listing.id,
+          tester_id: session.user.id,
+          status: 'in_progress',
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (claimErr || !newSubmission) throw claimErr;
+
+      setSubmission(newSubmission);
+      setCurrentStep('active_task');
+    } catch (err: any) {
+      console.error('Failed to claim slot on agreement acceptance:', err);
+      setError(sanitizeDatabaseError(err, 'Failed to claim slot. Please try again.'));
+      setCurrentStep('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeclineAgreement = async () => {

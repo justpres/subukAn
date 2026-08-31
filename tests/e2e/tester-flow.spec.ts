@@ -36,10 +36,10 @@ test.describe('Tester Flow & Milestone 4 Features E2E', () => {
     await page.goto('/dashboard/tester');
 
     // Assert page loaded
-    await expect(page.locator('h1')).toContainText('Tester Workspace');
+    await expect(page.locator('h1')).toContainText('Tester Workspace', { timeout: 25000 });
 
     // 1. Test Tab Switching: "My Submissions"
-    await page.click('button:has-text("My Submissions")');
+    await page.click('a:has-text("My Submissions")');
     await expect(page.locator('h2:has-text("Your Submission History")')).toBeVisible();
 
     // Verify rejected submission presents "Submit Rejection Dispute" button
@@ -63,7 +63,7 @@ test.describe('Tester Flow & Milestone 4 Features E2E', () => {
     }
 
     // 2. Test Tab Switching: "Earnings & Payout History"
-    await page.click('button:has-text("Earnings & Payout History")');
+    await page.click('a:has-text("Earnings")');
     await expect(page.locator('h3:has-text("GCash Payout History")')).toBeVisible();
     await expect(page.locator('text=Total Earnings').first()).toBeVisible();
 

@@ -8,11 +8,11 @@ import { ChevronRight } from 'lucide-react'
 export function DashboardBreadcrumbs() {
   const pathname = usePathname()
   
-  if (!pathname || pathname === '/dashboard') {
+  const segments = pathname ? pathname.split('/').filter(Boolean) : []
+  
+  if (segments.length <= 2) {
     return null
   }
-
-  const segments = pathname.split('/').filter(Boolean)
   
   const labelMap: Record<string, string> = {
     dashboard: 'Dashboard',
@@ -32,7 +32,7 @@ export function DashboardBreadcrumbs() {
   }
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 flex items-center space-x-2 text-sm text-slate select-none">
+    <nav aria-label="Breadcrumb" className="flex items-center space-x-2 text-sm text-slate-500 font-medium select-none">
       {segments.map((segment, index) => {
         const isLast = index === segments.length - 1
         const href = `/${segments.slice(0, index + 1).join('/')}`

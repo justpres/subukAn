@@ -6,7 +6,6 @@ import {
   Bell, 
   X, 
   Check, 
-  Trash2, 
   DollarSign, 
   CheckCircle2, 
   AlertCircle, 
@@ -60,12 +59,38 @@ const DEFAULT_NOTIFICATIONS: Notification[] = [
   }
 ]
 
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return 'Recently'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return 'Recently'
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } catch (e) {
+    return 'Recently'
+  }
+}
+
 export function NotificationCenter() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(DEFAULT_NOTIFICATIONS)
   const [loading, setLoading] = useState(false)
   const supabase = createBrowserClient()
+
+  // Handle escape key to dismiss popover
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown)
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
 
   const formatLink = (url: string) => {
     if (!url) return ''
@@ -146,21 +171,6 @@ export function NotificationCenter() {
     }
   }
 
-  const handleClearAll = async () => {
-    setNotifications([])
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase
-          .from('notifications')
-          .delete()
-          .eq('user_id', user.id)
-      }
-    } catch (e) {
-      console.warn('Failed to clear notifications:', e)
-    }
-  }
-
   const handleClearOne = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setNotifications(prev => prev.filter(n => n.id !== id))
@@ -190,32 +200,32 @@ export function NotificationCenter() {
     switch (type) {
       case 'payout_approved':
         return (
-          <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
-            <DollarSign className="w-4.5 h-4.5" />
+          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <DollarSign className="w-4 h-4" />
           </div>
         )
       case 'submission_update':
         return (
-          <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-4.5 h-4.5" />
+          <div className="w-8 h-8 rounded-full bg-blue-50 text-[#2955E3] border border-blue-100 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
           </div>
         )
       case 'new_listing':
         return (
-          <div className="w-9 h-9 rounded-full bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
-            <Zap className="w-4.5 h-4.5" />
+          <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
+            <Zap className="w-4 h-4" />
           </div>
         )
       case 'dispute_update':
         return (
-          <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
-            <ShieldAlert className="w-4.5 h-4.5" />
+          <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-4 h-4" />
           </div>
         )
       default:
         return (
-          <div className="w-9 h-9 rounded-full bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-4.5 h-4.5" />
+          <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-4 h-4" />
           </div>
         )
     }
@@ -226,23 +236,23 @@ export function NotificationCenter() {
       <div
         key={notif.id}
         onClick={() => handleMarkAsRead(notif.id)}
-        className={`p-4 transition-all duration-150 cursor-pointer flex items-start gap-3 relative group ${
-          notif.is_read ? 'bg-white hover:bg-slate-50/50' : 'bg-[#2955E3]/5 hover:bg-[#2955E3]/10'
+        className={`p-3.5 transition-all duration-150 cursor-pointer flex items-start gap-3 relative group ${
+          notif.is_read ? 'bg-white hover:bg-slate-50/80' : 'bg-[#2955E3]/5 hover:bg-[#2955E3]/10'
         }`}
       >
         {renderIcon(notif.type)}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-0.5">
-            <h4 className="text-xs font-bold text-[#0F172A] truncate">
+            <h4 className="text-xs font-bold text-slate-900 truncate">
               {notif.title}
             </h4>
-            <span className="text-[10px] text-slate-500 shrink-0 ml-2">
-              {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            <span className="text-[10px] text-slate-400 shrink-0 ml-2 font-mono">
+              {formatTime(notif.created_at)}
             </span>
           </div>
           
-          <p className="text-xs text-slate-800 leading-relaxed break-words font-medium">
+          <p className="text-xs text-slate-700 leading-relaxed break-words font-normal">
             {notif.message}
           </p>
 
@@ -250,7 +260,7 @@ export function NotificationCenter() {
             <a
               href={formatLink(notif.link_url)}
               onClick={() => setIsOpen(false)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2955E3] hover:text-[#1D4ED8] mt-1.5 transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#2955E3] hover:text-[#1D4ED8] mt-1.5 transition-colors"
             >
               View Details <ExternalLink className="w-3 h-3" />
             </a>
@@ -259,9 +269,9 @@ export function NotificationCenter() {
 
         <div className="flex flex-col items-center justify-between h-full py-0.5 self-stretch shrink-0">
           {!notif.is_read ? (
-            <span className="w-2.5 h-2.5 rounded-full bg-[#2955E3] shrink-0 mt-1" />
+            <span className="w-2 h-2 rounded-full bg-[#2955E3] shrink-0 mt-1" />
           ) : (
-            <div className="w-2.5 h-2.5" />
+            <div className="w-2 h-2" />
           )}
 
           <button
@@ -289,28 +299,31 @@ export function NotificationCenter() {
         aria-label="Open notifications"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        className="relative p-2.5 rounded-full text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2955E3]"
+        className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] focus:ring-0 animate-bell-wiggle"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center animate-pulse">
+          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unreadCount}
           </span>
         )}
       </button>
 
-      {/* Drawer Popover Overlay */}
+      {/* Popover Flyout Overlay & Container */}
       {isOpen && (
         <>
+          {/* Backdrop click-away overlay */}
           <div 
-            className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]" 
+            className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px] transition-opacity" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="absolute right-0 mt-2.5 z-50 w-96 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fadeIn flex flex-col max-h-[500px]">
-            {/* Drawer Header */}
-            <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between shrink-0">
+
+          {/* Popover Container */}
+          <div className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] sm:w-96 max-h-[480px] bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden animate-fadeIn">
+            {/* Header: Clean layout with title, new badge, mark all read, and single X close */}
+            <div className="p-3.5 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm text-[#0F172A] font-poppins">Notifications</h3>
+                <h3 className="font-bold text-sm text-slate-900">Notifications</h3>
                 {unreadCount > 0 && (
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700">
                     {unreadCount} new
@@ -323,24 +336,16 @@ export function NotificationCenter() {
                   <button
                     type="button"
                     onClick={handleMarkAllAsRead}
-                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 transition-colors"
+                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
                   >
                     <Check className="w-3.5 h-3.5" /> Mark all read
-                  </button>
-                )}
-                {notifications.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleClearAll}
-                    className="text-[11px] font-bold text-slate-500 hover:text-rose-600 flex items-center gap-1 ml-1 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Clear
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/50 transition-colors"
+                  aria-label="Close notifications"
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/50 transition-colors ml-0.5"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -348,7 +353,7 @@ export function NotificationCenter() {
             </div>
 
             {/* Notification List */}
-            <div className="overflow-y-auto divide-y divide-slate-100 flex-1">
+            <div className="overflow-y-auto divide-y divide-slate-100 flex-1 overscroll-contain">
               {loading ? (
                 <div className="p-8 text-center text-xs text-slate-400 font-mono">
                   Loading updates...
@@ -365,7 +370,7 @@ export function NotificationCenter() {
                 <div className="flex flex-col">
                   {todayNotifs.length > 0 && (
                     <div className="flex flex-col">
-                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-500 tracking-wider border-b border-slate-100 select-none">
+                      <div className="bg-slate-50/70 px-4 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 select-none">
                         TODAY
                       </div>
                       <div className="divide-y divide-slate-100">
@@ -375,7 +380,7 @@ export function NotificationCenter() {
                   )}
                   {earlierNotifs.length > 0 && (
                     <div className="flex flex-col">
-                      <div className="bg-slate-50/50 px-4 py-1.5 text-[9px] font-extrabold text-slate-500 tracking-wider border-y border-slate-100 select-none">
+                      <div className="bg-slate-50/70 px-4 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-y border-slate-100 select-none">
                         EARLIER
                       </div>
                       <div className="divide-y divide-slate-100">
@@ -387,12 +392,12 @@ export function NotificationCenter() {
               )}
             </div>
 
-            {/* Drawer Footer */}
-            <div className="p-3 bg-slate-50 border-t border-slate-200 text-center shrink-0">
+            {/* Footer */}
+            <div className="p-3 bg-slate-50/90 border-t border-slate-200 text-center shrink-0">
               <a
                 href={getFooterHref()}
                 onClick={() => setIsOpen(false)}
-                className="text-xs font-bold text-[#2955E3] hover:text-[#1D4ED8] hover:underline"
+                className="text-xs font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors inline-flex items-center gap-1"
               >
                 See all notifications →
               </a>

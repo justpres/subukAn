@@ -7,6 +7,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { DashboardSidebar } from '@/components/shared/DashboardSidebar'
 import { DashboardBreadcrumbs } from '@/components/shared/DashboardBreadcrumbs'
 import { NotificationCenter } from '@/components/shared/NotificationCenter'
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -75,25 +76,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
       
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden z-10">
-        <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white/70 backdrop-blur-md border-b border-slate-100 z-30 relative shrink-0">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 text-slate hover:text-ink transition-colors"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <span className="font-extrabold text-lg text-gray-900 tracking-tight">{headerTitle}</span>
-          </div>
+        <ErrorBoundary fallback={
+          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 z-30 relative shrink-0">
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-bold text-slate-800 font-poppins">subukAn</span>
+            </div>
+            <div className="text-xs text-slate-400 font-mono">Header suspended</div>
+          </header>
+        }>
+          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 z-30 relative shrink-0">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <DashboardBreadcrumbs />
+            </div>
 
-          <div className="flex items-center gap-3">
-            <NotificationCenter />
-          </div>
-        </header>
+            <div className="flex items-center gap-3">
+              <NotificationCenter />
+            </div>
+          </header>
+        </ErrorBoundary>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-h-0">
           <div className="max-w-7xl mx-auto">
-            <DashboardBreadcrumbs />
             {children}
           </div>
         </main>

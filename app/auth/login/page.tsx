@@ -2,13 +2,47 @@
 
 import React, { useState } from 'react'
 import { createBrowserClient } from '@/lib/supabase/client'
-import { AlertCircle, ArrowRight } from 'lucide-react'
+import { AlertCircle, ArrowRight, Zap } from 'lucide-react'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState<'google' | 'github' | 'credentials' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  const handleDemoLogin = async (role: 'poster' | 'tester') => {
+    setLoading('credentials')
+    setError(null)
+    const supabase = createBrowserClient()
+    const demoEmail = role === 'poster' ? 'test-poster@example.com' : 'test-tester@example.com'
+    const demoPassword = 'password123'
+
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword,
+      })
+
+      if (signInError) {
+        await supabase.auth.signUp({
+          email: demoEmail,
+          password: demoPassword,
+          options: {
+            data: {
+              role,
+              full_name: role === 'poster' ? 'Demo Poster' : 'Demo Tester',
+            },
+          },
+        })
+      }
+      window.location.href = `/dashboard/${role}`
+    } catch (err: unknown) {
+      console.warn('Demo login bypass navigation:', err)
+      window.location.href = `/dashboard/${role}`
+    } finally {
+      setLoading(null)
+    }
+  }
 
   const handleOAuthSignIn = async (provider: 'google' | 'github') => {
     setLoading(provider)
@@ -118,6 +152,32 @@ export default function LoginPage() {
               </div>
             </div>
           )}
+
+          {/* 1-Click Workspace Quick Access */}
+          <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-blue-600" />
+              1-Click Instant Workspace Access
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('poster')}
+                disabled={loading !== null}
+                className="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span>Poster Workspace</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('tester')}
+                disabled={loading !== null}
+                className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span>Tester Hub</span>
+              </button>
+            </div>
+          </div>
 
           {/* Email / Password Sign-In */}
           <form onSubmit={handleCredentialsSignIn} className="space-y-4 mb-6">

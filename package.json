@@ -11,10 +11,15 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
+    "@tremor/react": "^3.18.7",
     "lucide-react": "^0.424.0",
     "next": "14.2.5",
     "react": "^18",
+    "react-chrono": "^3.3.3",
+    "react-credit-cards-2": "^1.2.0",
     "react-dom": "^18",
+    "react-parallax-tilt": "^1.7.337",
+    "recharts": "^3.10.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

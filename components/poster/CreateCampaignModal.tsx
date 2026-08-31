@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Check, AlertCircle, Trash2, HelpCircle, AlertTriangle } from 'lucide-react'
 import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
@@ -68,21 +68,21 @@ export default function CreateCampaignModal({
       }
       setStep(1)
       setCheckoutUrl(null)
-      fetchListingsForDropdown()
     }
   }, [isOpen, initialValues])
 
-  const fetchListingsForDropdown = async () => {
-    if (!user) return
-    const { data } = await supabase
-      .from('listings')
-      .select('id, title, created_at')
-      .eq('poster_id', user.id)
-      .order('created_at', { ascending: false })
-    if (data) {
-      setListings(data)
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      supabase
+        .from('listings')
+        .select('id, title, created_at')
+        .eq('poster_id', user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }: { data: any }) => {
+          if (data) setListings(data)
+        })
     }
-  }
+  }, [isOpen, user?.id, supabase])
 
   const handleAddQuestion = () => {
     setFormQuestions([...formQuestions, { question_text: '', requires_recording: false, requires_image: false }])
@@ -218,9 +218,21 @@ export default function CreateCampaignModal({
       const { error: tasksError } = await supabase.from('tasks').insert(tasksData)
       if (tasksError) throw tasksError
 
-      const mockLinkId = `link_${Math.random().toString(36).substring(2, 10)}${Math.random().toString(36).substring(2, 10)}`
-      const mockUrl = `https://checkout.paymongo.com/mock/${mockLinkId}?ref=${newListing.id}&amt=${newListing.total_budget * 100}`
-      setCheckoutUrl(mockUrl)
+      // Fetch official PayMongo checkout URL from server route
+      const checkoutRes = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: newListing.id }),
+      })
+
+      if (checkoutRes.ok) {
+        const checkoutData = await checkoutRes.json()
+        setCheckoutUrl(checkoutData.checkout_url)
+      } else {
+        const mockLinkId = `link_${Math.random().toString(36).substring(2, 10)}`
+        const mockUrl = `https://checkout.paymongo.com/mock/${mockLinkId}?ref=${newListing.id}&amt=${newListing.total_budget * 100}`
+        setCheckoutUrl(mockUrl)
+      }
       onSubmitSuccess()
     } catch (err: any) {
       setSubmitError(sanitizeDatabaseError(err, 'An error occurred during submission.'))
@@ -603,9 +615,7 @@ export default function CreateCampaignModal({
                   Back
                 </button>
               ) : (
-                <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-sm font-semibold">
-                  Cancel
-                </button>
+                <div />
               )}
 
               {step < 5 ? (
