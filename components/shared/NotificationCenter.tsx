@@ -16,49 +16,6 @@ import {
 import { createBrowserClient } from '@/lib/supabase/client'
 import { Notification } from '@/types'
 
-const DEFAULT_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'n1',
-    user_id: 'current-user',
-    title: 'Payout Approved',
-    message: 'Your GCash payout request of ₱400.00 has been processed and credited.',
-    type: 'payout_approved',
-    is_read: false,
-    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 mins ago
-    link_url: '/dashboard/tester?tab=earnings'
-  },
-  {
-    id: 'n2',
-    user_id: 'current-user',
-    title: 'Submission Approved',
-    message: 'Poster accepted your submission for "E-Commerce App GCash Checkout Test". ₱200.00 credited!',
-    type: 'submission_update',
-    is_read: false,
-    created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
-    link_url: '/dashboard/tester?tab=submissions'
-  },
-  {
-    id: 'n3',
-    user_id: 'current-user',
-    title: 'New Listing Alert',
-    message: 'A new target-matched job "Sari-Sari Store Inventory App Initial Run" is now open.',
-    type: 'new_listing',
-    is_read: true,
-    created_at: new Date(Date.now() - 1000 * 60 * 360).toISOString(), // 6 hours ago
-    link_url: '/dashboard/tester?tab=available'
-  },
-  {
-    id: 'n4',
-    user_id: 'current-user',
-    title: 'Dispute Update',
-    message: 'Support team initiated re-review for your disputed submission.',
-    type: 'dispute_update',
-    is_read: true,
-    created_at: new Date(Date.now() - 1000 * 60 * 1440).toISOString(), // 1 day ago
-    link_url: '/dashboard/tester?tab=submissions'
-  }
-]
-
 const formatTime = (dateStr: string) => {
   if (!dateStr) return 'Recently'
   try {
@@ -73,7 +30,7 @@ const formatTime = (dateStr: string) => {
 export function NotificationCenter() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>(DEFAULT_NOTIFICATIONS)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
   const supabase = createBrowserClient()
 
@@ -115,7 +72,7 @@ export function NotificationCenter() {
       setLoading(true)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        setNotifications(DEFAULT_NOTIFICATIONS)
+        setNotifications([])
         return
       }
 
@@ -125,14 +82,14 @@ export function NotificationCenter() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (!error && Array.isArray(data) && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         setNotifications(data as Notification[])
       } else {
-        setNotifications(DEFAULT_NOTIFICATIONS)
+        setNotifications([])
       }
     } catch (e) {
       console.warn('Error fetching notifications:', e)
-      setNotifications(DEFAULT_NOTIFICATIONS)
+      setNotifications([])
     } finally {
       setLoading(false)
     }

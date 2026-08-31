@@ -19,7 +19,8 @@ import {
   EyeOff, 
   ExternalLink,
   Clock,
-  TrendingDown
+  TrendingDown,
+  BarChart2
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
@@ -198,6 +199,40 @@ function PosterDashboardContent() {
   const spentPayouts = listings.filter(l => l.status === 'released').reduce((sum, l) => sum + l.total_budget, 0)
   const releasedCampaignsCount = listings.filter(l => l.status === 'released').length
   const reviewCampaignsCount = listings.filter(l => l.status === 'review').length
+
+  const escrowChartData = useMemo(() => {
+    if (listings.length === 0) return []
+    const sorted = [...listings].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    let runningTotal = 0
+    return sorted.map((l) => {
+      runningTotal += l.total_budget || 0
+      const d = new Date(l.created_at)
+      const formattedDate = isNaN(d.getTime()) 
+        ? 'Recent' 
+        : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return {
+        date: formattedDate,
+        'Cumulative Escrow': runningTotal
+      }
+    })
+  }, [listings])
+
+  const timelineItems = useMemo(() => {
+    if (listings.length === 0) return []
+    const sorted = [...listings].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
+    return sorted.map((l) => {
+      const d = new Date(l.created_at)
+      const formattedDate = isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      const isReleased = l.status === 'released'
+      const hasSlotsFilled = (l.slots_filled || 0) > 0
+      return {
+        title: formattedDate,
+        cardTitle: l.title,
+        cardSubtitle: isReleased ? 'Completed & Disbursed' : hasSlotsFilled ? `${l.slots_filled} Testers Active` : 'Open for Testing',
+        cardDetailedText: `Campaign budget of ₱${(l.total_budget || 0).toLocaleString()} with ${l.slots_count || 0} testing slots at ₱${(l.rate_per_tester || 0).toLocaleString()} per tester.`
+      }
+    })
+  }, [listings])
 
   // Filtered listings for Listings Tab
   const filteredListings = useMemo(() => {
@@ -1039,34 +1074,40 @@ function PosterDashboardContent() {
                   <div>
                     <span className="text-xs text-slate-400 font-medium block mb-2">Total Testing Budget Over Time</span>
                     <div className="h-44">
-                      <ErrorBoundary>
-                        <AreaChart
-                          className="h-full"
-                          data={[
-                            { date: 'Jul 15', 'Cumulative Escrow': 5000 },
-                            { date: 'Jul 20', 'Cumulative Escrow': 8000 },
-                            { date: 'Jul 25', 'Cumulative Escrow': 12000 },
-                            { date: 'Jul 30', 'Cumulative Escrow': 18000 },
-                            { date: 'Aug 04', 'Cumulative Escrow': 22000 },
-                            { date: 'Aug 09', 'Cumulative Escrow': 28000 },
-                            { date: 'Aug 15', 'Cumulative Escrow': 35000 }
-                          ]}
-                          index="date"
-                          categories={['Cumulative Escrow']}
-                          colors={['blue']}
-                          valueFormatter={(number) => `₱${number.toLocaleString('en-PH')}`}
-                          showLegend={false}
-                          yAxisWidth={60}
-                        />
-                      </ErrorBoundary>
+                      {escrowChartData.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-lg text-center p-4 bg-slate-50/50">
+                          <BarChart2 className="w-6 h-6 text-slate-300 mb-1" />
+                          <p className="text-xs font-semibold text-slate-600">No budget activity recorded</p>
+                          <p className="text-[11px] text-slate-400">Post a test campaign to visualize cumulative escrow growth.</p>
+                        </div>
+                      ) : (
+                        <ErrorBoundary>
+                          <AreaChart
+                            className="h-full"
+                            data={escrowChartData}
+                            index="date"
+                            categories={['Cumulative Escrow']}
+                            colors={['blue']}
+                            valueFormatter={(number) => `₱${number.toLocaleString('en-PH')}`}
+                            showLegend={false}
+                            yAxisWidth={60}
+                          />
+                        </ErrorBoundary>
+                      )}
                     </div>
                   </div>
                   
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 font-medium">Average Review Time</span>
+                    <span className="text-xs text-slate-500 font-medium">Review Status</span>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
                       <Clock className="w-3.5 h-3.5 text-blue-600" />
-                      <span>14m avg speed</span>
+                      <span>
+                        {listings.length === 0 
+                          ? 'No campaigns' 
+                          : reviewCampaignsCount > 0 
+                          ? `${reviewCampaignsCount} needing review` 
+                          : 'All reviews caught up'}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -1140,48 +1181,33 @@ function PosterDashboardContent() {
               </h3>
               <span className="text-xs text-slate-500 font-medium font-mono">Platform Events Tracker</span>
             </div>
-            <div className="timeline-container w-full" style={{ minHeight: '350px' }}>
-              <ErrorBoundary>
-                <Chrono
-                  items={[
-                    {
-                      title: "Jul 15, 2026",
-                      cardTitle: "Listing Created",
-                      cardSubtitle: "UX evaluation task defined",
-                      cardDetailedText: "Initial listing created with a rate of ₱150 per tester to gather feedback on the design prototype."
-                    },
-                    {
-                      title: "Jul 16, 2026",
-                      cardTitle: "Escrow Protected",
-                      cardSubtitle: "Funds locked securely",
-                      cardDetailedText: "Escrow budget successfully funded and secured in the vault to guarantee tester payout."
-                    },
-                    {
-                      title: "Jul 20, 2026",
-                      cardTitle: "Testers Claimed",
-                      cardSubtitle: "Task slots fully allocated",
-                      cardDetailedText: "Verified testers claimed all slots and started functional walkthroughs and impression checks."
-                    },
-                    {
-                      title: "Aug 15, 2026",
-                      cardTitle: "Payouts Approved",
-                      cardSubtitle: "Escrow released to testers",
-                      cardDetailedText: "All completed submissions were approved and payout was disbursed directly to tester GCash wallets."
-                    }
-                  ]}
-                  mode="VERTICAL"
-                  theme={{
-                    primary: '#2955E3',
-                    secondary: '#E0F2FE',
-                    cardBgColor: '#FFFFFF',
-                    titleColor: '#0F172A',
-                    titleColorActive: '#2955E3',
-                  }}
-                  cardHeight={80}
-                  disableToolbar
-                />
-              </ErrorBoundary>
-            </div>
+            {timelineItems.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 space-y-2">
+                <Clock className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-sm font-semibold text-slate-700">No timeline milestones yet</p>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  When you publish test campaigns and testers submit feedback, your chronological milestones will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="timeline-container w-full" style={{ minHeight: '350px' }}>
+                <ErrorBoundary>
+                  <Chrono
+                    items={timelineItems}
+                    mode="VERTICAL"
+                    theme={{
+                      primary: '#2955E3',
+                      secondary: '#E0F2FE',
+                      cardBgColor: '#FFFFFF',
+                      titleColor: '#0F172A',
+                      titleColorActive: '#2955E3',
+                    }}
+                    cardHeight={80}
+                    disableToolbar
+                  />
+                </ErrorBoundary>
+              </div>
+            )}
           </div>
         </div>
       )}

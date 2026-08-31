@@ -15,36 +15,6 @@ export interface ListingFeedItem {
   status: string
 }
 
-const DEFAULT_FEED_LISTINGS: ListingFeedItem[] = [
-  {
-    id: 'feed-1',
-    title: 'E-Commerce GCash & Maya Checkout Flow',
-    description: 'Verify localized payment gateway response times and check for UI distortion on mobile screens.',
-    rate_per_tester: 250,
-    slots_count: 5,
-    slots_filled: 2,
-    status: 'open'
-  },
-  {
-    id: 'feed-2',
-    title: 'Rider Delivery App Pin Accuracy Verification',
-    description: 'Test real-time GPS location pin updates and map marker rendering across Metro Manila locations.',
-    rate_per_tester: 400,
-    slots_count: 10,
-    slots_filled: 6,
-    status: 'open'
-  },
-  {
-    id: 'feed-3',
-    title: 'Sari-Sari Store POS Inventory Audit',
-    description: 'Perform quick 5-minute impression testing on inventory list search filtering and checkout modal.',
-    rate_per_tester: 150,
-    slots_count: 8,
-    slots_filled: 3,
-    status: 'open'
-  }
-]
-
 export default function Home() {
   const [user, setUser] = useState<unknown | null>(null)
   const [loading, setLoading] = useState(true)
@@ -101,7 +71,7 @@ export default function Home() {
     '@type': 'ItemList',
     'name': 'subukAn Active Testing Bounties',
     'description': 'Live marketplace feed of open software user testing and QA tasks in the Philippines.',
-    'itemListElement': (listings.length > 0 ? listings : DEFAULT_FEED_LISTINGS).map((listing, index) => ({
+    'itemListElement': listings.map((listing, index) => ({
       '@type': 'ListItem',
       'position': index + 1,
       'item': {
@@ -308,9 +278,31 @@ export default function Home() {
                 </div>
               ))}
             </div>
+          ) : listings.length === 0 ? (
+            <div className="border border-steel/30 rounded-card p-12 bg-white text-center max-w-lg mx-auto shadow-sm space-y-4">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-primary flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-ink">No Active Tests Available Right Now</h3>
+                <p className="text-sm text-slate mt-1">
+                  New testing opportunities appear as creators post campaigns. Check back soon or post your own app test!
+                </p>
+              </div>
+              <div>
+                <Link
+                  href="/auth/login?role=poster"
+                  className="inline-flex items-center px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-button text-sm transition-all shadow-sm"
+                >
+                  Post a Test Campaign
+                </Link>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(listings.length > 0 ? listings : DEFAULT_FEED_LISTINGS).map((listing) => {
+              {listings.map((listing) => {
                 const slotsLeft = Math.max(0, (listing.slots_count || 0) - (listing.slots_filled || 0))
                 return (
                   <div 

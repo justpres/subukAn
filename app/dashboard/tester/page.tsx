@@ -60,59 +60,8 @@ export interface PayoutRecord {
   created_at: string
 }
 
-const DEFAULT_SUBMISSIONS: SubmissionRecord[] = [
-  {
-    id: 'sub_1',
-    listing_id: 'j1',
-    listing_title: 'E-Commerce App GCash Checkout Test',
-    rate_per_tester: 200,
-    status: 'approved',
-    submitted_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString()
-  },
-  {
-    id: 'sub_2',
-    listing_id: 'j2',
-    listing_title: 'Rider Delivery App Pin Accuracy Verification',
-    rate_per_tester: 500,
-    status: 'rejected',
-    rejection_reason: 'instructions_not_followed',
-    rejection_explanation: 'The GPS pin locator screenshot was blurry and did not show exact coordinates.',
-    submitted_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 50).toISOString()
-  },
-  {
-    id: 'sub_3',
-    listing_id: 'j3',
-    listing_title: 'Sari-Sari Store Inventory App Initial Run',
-    rate_per_tester: 50,
-    status: 'pending_review',
-    submitted_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-  }
-]
-
-const DEFAULT_PAYOUTS: PayoutRecord[] = [
-  {
-    id: 'p_1',
-    reference_id: 'PAY-GCASH-9821',
-    amount: 200,
-    gcash_number: '0917-***-5678',
-    status: 'completed',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString()
-  },
-  {
-    id: 'p_2',
-    reference_id: 'PAY-GCASH-4412',
-    amount: 200,
-    gcash_number: '0917-***-5678',
-    status: 'completed',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString()
-  }
-]
-
 const maskGcashNumber = (num: string) => {
-  if (!num) return '0917-***-5678'
+  if (!num) return 'Not configured'
   if (num.includes('***')) return num
   const cleaned = num.replace(/[-\s]/g, '')
   if (cleaned.length === 11) {
@@ -122,12 +71,12 @@ const maskGcashNumber = (num: string) => {
 }
 
 const getLast4OfGcash = (num: string) => {
-  if (!num) return '5678'
+  if (!num) return '----'
   const cleaned = num.replace(/[-\s]/g, '')
   if (cleaned.length >= 4) {
     return cleaned.slice(-4)
   }
-  return '5678'
+  return '----'
 }
 
 function TesterDashboardContent() {
@@ -141,7 +90,7 @@ function TesterDashboardContent() {
   // Profile and earnings states
   const [totalEarnings, setTotalEarnings] = useState(0)
   const [withdrawableBalance, setWithdrawableBalance] = useState(0)
-  const [gcashNumber, setGcashNumber] = useState('0917-***-5678')
+  const [gcashNumber, setGcashNumber] = useState('')
   const [profile, setProfile] = useState<Partial<UserProfile> | null>(null)
   const [copiedText, setCopiedText] = useState<'card' | 'gcash' | null>(null)
 
@@ -152,8 +101,8 @@ function TesterDashboardContent() {
     setTimeout(() => setCopiedText(null), 1500)
   }
   const [listings, setListings] = useState<JobListing[]>([])
-  const [submissions, setSubmissions] = useState<SubmissionRecord[]>(DEFAULT_SUBMISSIONS)
-  const [payouts, setPayouts] = useState<PayoutRecord[]>(DEFAULT_PAYOUTS)
+  const [submissions, setSubmissions] = useState<SubmissionRecord[]>([])
+  const [payouts, setPayouts] = useState<PayoutRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
@@ -269,7 +218,7 @@ function TesterDashboardContent() {
             id: p.id,
             reference_id: p.reference_id || `PAY-GCASH-${p.id.slice(0, 4)}`,
             amount: p.amount,
-            gcash_number: p.gcash_number || '0917-***-5678',
+            gcash_number: p.gcash_number || 'Not configured',
             status: p.status || 'completed',
             created_at: p.created_at
           })))
@@ -278,9 +227,14 @@ function TesterDashboardContent() {
             .reduce((sum: number, p: any) => sum + p.amount, 0)
           setTotalEarnings(totalPaid)
           setWithdrawableBalance(Math.max(0, totalPaid))
+        } else {
+          setPayouts([])
+          setTotalEarnings(0)
+          setWithdrawableBalance(0)
         }
       } catch (err) {
         console.warn('Payouts query fallback:', err)
+        setPayouts([])
       }
 
       // 2. Fetch submissions for user
@@ -320,9 +274,12 @@ function TesterDashboardContent() {
             created_at: s.created_at
           }))
           setSubmissions(mappedSubs)
+        } else {
+          setSubmissions([])
         }
       } catch (err) {
         console.warn('User submissions fetch fallback:', err)
+        setSubmissions([])
       }
 
       // 3. Fetch open listings
@@ -790,7 +747,7 @@ function TesterDashboardContent() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-baseline">
                     <span className="text-2xl font-extrabold text-slate-900 font-mono">
-                      ₱2,800.00
+                      ₱{totalEarnedValue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     <span className="text-xs font-semibold text-slate-500">
                       of ₱5,000.00 target
@@ -800,11 +757,14 @@ function TesterDashboardContent() {
                   {/* Progress bar */}
                   <div className="space-y-1.5">
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: '56%' }} />
+                      <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, Math.max(0, Math.round((totalEarnedValue / 5000) * 100)))}%` }} 
+                      />
                     </div>
                     <div className="flex justify-between text-[11px] font-medium text-slate-500">
-                      <span>56% complete</span>
-                      <span>₱2,200.00 remaining</span>
+                      <span>{Math.min(100, Math.round((totalEarnedValue / 5000) * 100))}% complete</span>
+                      <span>₱{(Math.max(0, 5000 - totalEarnedValue)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remaining</span>
                     </div>
                   </div>
                 </div>
@@ -816,17 +776,17 @@ function TesterDashboardContent() {
                   Progress Milestones
                 </span>
                 <div className="grid grid-cols-3 gap-2 text-[10px] font-semibold text-slate-500">
-                  <div className="flex items-center gap-1 text-emerald-600">
-                    <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-                    <span>₱1,500 reached</span>
+                  <div className={`flex items-center gap-1 ${totalEarnedValue >= 1500 ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
+                    {totalEarnedValue >= 1500 ? <Check className="w-3 h-3 text-emerald-500 shrink-0" /> : <Clock className="w-3 h-3 text-slate-400 shrink-0" />}
+                    <span>₱1,500 {totalEarnedValue >= 1500 ? 'reached' : 'milestone'}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-blue-600">
-                    <Clock className="w-3 h-3 text-blue-500 shrink-0" />
-                    <span>₱3,000 next</span>
+                  <div className={`flex items-center gap-1 ${totalEarnedValue >= 3000 ? 'text-emerald-600 font-bold' : totalEarnedValue >= 1500 ? 'text-blue-600' : 'text-slate-400'}`}>
+                    {totalEarnedValue >= 3000 ? <Check className="w-3 h-3 text-emerald-500 shrink-0" /> : <Clock className="w-3 h-3 shrink-0" />}
+                    <span>₱3,000 {totalEarnedValue >= 3000 ? 'reached' : 'milestone'}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Target className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span>₱5,000 goal</span>
+                  <div className={`flex items-center gap-1 ${totalEarnedValue >= 5000 ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
+                    {totalEarnedValue >= 5000 ? <Check className="w-3 h-3 text-emerald-500 shrink-0" /> : <Target className="w-3 h-3 text-slate-400 shrink-0" />}
+                    <span>₱5,000 {totalEarnedValue >= 5000 ? 'reached' : 'goal'}</span>
                   </div>
                 </div>
               </div>
@@ -846,11 +806,13 @@ function TesterDashboardContent() {
                 <div className="space-y-3">
                   <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-lg">
                     <p className="text-xs text-blue-900 font-medium leading-relaxed font-mono">
-                      {"You haven't completed: Functional checkout walks. Try one to earn higher rewards."}
+                      {listings.length > 0
+                        ? `There are ${listings.length} open test campaign${listings.length === 1 ? '' : 's'} available to claim right now!`
+                        : 'No open campaigns available right now. Check back soon for new testing tasks.'}
                     </p>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Update your profile demographics and preferences to unlock specialized checkout testing jobs.
+                    Update your profile demographics and preferences to qualify for specialized testing opportunities.
                   </p>
                 </div>
               </div>

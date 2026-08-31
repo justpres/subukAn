@@ -20,9 +20,8 @@ test.describe('Tester Flow & Milestone 4 Features E2E', () => {
 
     // Verify Notification Drawer opened
     await expect(page.locator('h3:has-text("Notifications")')).toBeVisible();
-    await expect(page.locator('text=Payout Approved')).toBeVisible();
 
-    // Click "Mark all read"
+    // Click "Mark all read" if visible
     const markAllReadBtn = page.locator('button:has-text("Mark all read")');
     if (await markAllReadBtn.isVisible()) {
       await markAllReadBtn.click();
