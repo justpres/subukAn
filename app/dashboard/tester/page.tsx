@@ -606,7 +606,7 @@ function TesterDashboardContent() {
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Available for Withdrawal
+                  Ready to Cash Out
                 </span>
                 <div className="font-mono text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                   ₱{withdrawableBalance.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1305,18 +1305,18 @@ function TesterDashboardContent() {
                   <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
                     <CheckCircle className="w-6 h-6" aria-hidden="true" />
                   </div>
-                  <h4 className="font-bold text-slate-900 text-base">GCash Account Verified!</h4>
-                  <p className="text-xs text-slate-600">Your GCash mobile number has been saved. Payouts for approved submissions are automatically credited to this number.</p>
+                  <h4 className="font-bold text-slate-900 text-base">GCash Number Saved!</h4>
+                  <p className="text-xs text-slate-600">Your GCash number is verified. Payments will be sent straight to this number whenever your test submissions are approved.</p>
                 </div>
               ) : (
                 <form onSubmit={handleRequestPayout} className="space-y-4">
                   <div className="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-200/70">
-                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Registered GCash</span>
-                    <span className="text-sm font-mono font-extrabold text-[#2955E3] tabular-nums">{payoutGcashNumber || gcashNumber || 'Unset'}</span>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Current GCash</span>
+                    <span className="text-sm font-mono font-extrabold text-[#2955E3] tabular-nums">{payoutGcashNumber || gcashNumber || 'Not set'}</span>
                   </div>
 
                   <div>
-                    <label htmlFor="tester-gcash-input" className="block text-xs font-bold text-slate-700 mb-1.5">Update GCash Payout Mobile Number</label>
+                    <label htmlFor="tester-gcash-input" className="block text-xs font-bold text-slate-700 mb-1.5">Enter your 11-digit GCash Number</label>
                     <input
                       id="tester-gcash-input"
                       type="text"
@@ -1326,7 +1326,7 @@ function TesterDashboardContent() {
                       placeholder="09XXXXXXXXX"
                       className="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-[#2955E3] focus:ring-1 focus:ring-[#2955E3] focus-visible:ring-2 focus-visible:ring-[#2955E3]"
                     />
-                    <p className="text-[11px] text-slate-500 mt-1">SubukAn automatically disburses ₱ per task directly to this GCash number upon approval.</p>
+                    <p className="text-[11px] text-slate-500 mt-1">Your rewards will be sent automatically to this GCash number once your test is approved.</p>
                   </div>
 
                   {payoutError && (

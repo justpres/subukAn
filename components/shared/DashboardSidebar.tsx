@@ -39,13 +39,13 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
   const links = []
 
   if (isPoster) {
-    links.push({ name: 'Dashboard Overview', href: '/dashboard/poster?tab=overview', icon: LayoutDashboard })
-    links.push({ name: 'My Listings', href: '/dashboard/poster?tab=listings', icon: FileText })
+    links.push({ name: 'Overview', href: '/dashboard/poster?tab=overview', icon: LayoutDashboard })
+    links.push({ name: 'My Campaigns', href: '/dashboard/poster?tab=listings', icon: FileText })
     links.push({ name: 'Settings', href: '/dashboard/poster?tab=settings', icon: Settings })
   } else if (isTester) {
-    links.push({ name: 'Available Tasks', href: '/dashboard/tester?tab=available', icon: LayoutDashboard })
+    links.push({ name: 'Available Tests', href: '/dashboard/tester?tab=available', icon: LayoutDashboard })
     links.push({ name: 'My Submissions', href: '/dashboard/tester?tab=submissions', icon: CheckSquare })
-    links.push({ name: 'Earnings', href: '/dashboard/tester?tab=earnings', icon: DollarSign })
+    links.push({ name: 'My Earnings', href: '/dashboard/tester?tab=earnings', icon: DollarSign })
   }
 
   return (

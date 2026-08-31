@@ -127,7 +127,7 @@ function DashboardGateContent() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-extrabold tracking-tight mb-3">subukAn</h1>
         <p className="text-gray-500 text-lg">
-          Choose your path to begin. Secure escrow QA crowdsourcing for local apps.
+          Choose how you want to use subukAn.
         </p>
       </div>
 
@@ -152,15 +152,15 @@ function DashboardGateContent() {
           </div>
           
           <h2 className="text-2xl font-bold mb-3 text-[#1a1a1a] group-hover:text-blue-600 transition-colors">
-            I want to hire testers
+            I want to test my app
           </h2>
           <p className="text-gray-600 mb-6 flex-grow leading-relaxed">
-            Post your website or app listing, secure your testing budget in escrow, and get verified feedback with screen recordings and task checklists.
+            Create a test round, set your reward per tester, and receive real feedback, screenshots, and screen recordings.
           </p>
 
           <div className="border-t border-gray-100 pt-4 mt-auto w-full">
             <span className="text-sm font-semibold text-blue-600 group-hover:underline">
-              {updating === 'poster' ? 'Setting up...' : 'Go to Poster Dashboard →'}
+              {updating === 'poster' ? 'Setting up...' : 'Go to Creator Dashboard →'}
             </span>
           </div>
         </button>
@@ -177,10 +177,10 @@ function DashboardGateContent() {
           </div>
 
           <h2 className="text-2xl font-bold mb-3 text-[#1a1a1a] group-hover:text-emerald-600 transition-colors">
-            I want to test apps
+            I want to earn as a tester
           </h2>
           <p className="text-gray-600 mb-6 flex-grow leading-relaxed">
-            Earn GCash rewards for testing new apps. Review tasks, complete test checklists with recording evidence, and withdraw your verified earnings.
+            Try out websites and mobile apps, complete simple task steps, and get paid straight to your GCash.
           </p>
 
           <div className="border-t border-gray-100 pt-4 mt-auto w-full">
@@ -195,11 +195,11 @@ function DashboardGateContent() {
       <div className="mt-12 flex flex-wrap justify-center gap-6 text-sm text-gray-400">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-gray-400" />
-          <span>PayMongo Escrow Guarantee</span>
+          <span>Protected Payments</span>
         </div>
         <div className="flex items-center gap-2">
           <UserCheck className="w-4 h-4 text-gray-400" />
-          <span>Verified GCash Profiles</span>
+          <span>Verified GCash Payouts</span>
         </div>
       </div>
     </div>

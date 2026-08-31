@@ -42,28 +42,28 @@ test.describe('Tester Flow & Milestone 4 Features E2E', () => {
     await page.click('a:has-text("My Submissions")');
     await expect(page.locator('h2:has-text("Your Submission History")')).toBeVisible();
 
-    // Verify rejected submission presents "Submit Rejection Dispute" button
-    const disputeTrigger = page.locator('button:has-text("Submit Rejection Dispute")').first();
+    // Verify rejected submission presents dispute / review button
+    const disputeTrigger = page.locator('button:has-text("Dispute Rejection"), button:has-text("Request Review"), button:has-text("Submit Rejection Dispute")').first();
     if (await disputeTrigger.isVisible()) {
       await disputeTrigger.click();
 
       // Verify Dispute Modal opened
-      await expect(page.locator('h3:has-text("Submit Rejection Dispute")')).toBeVisible();
+      await expect(page.locator('h3:has-text("Request a Second Review")')).toBeVisible();
 
       // Fill in dispute explanation
-      const explanationInput = page.locator('textarea[placeholder*="Explain why the rejection was unfair"]');
+      const explanationInput = page.locator('#dispute-explanation-textarea');
       await expect(explanationInput).toBeVisible();
       await explanationInput.fill('I executed all steps accurately as requested in the testing scenario.');
 
-      // Click Submit Dispute
-      await page.click('button:has-text("Submit Dispute")');
+      // Click Send Request
+      await page.click('button:has-text("Send Request")');
 
       // Verify success message
-      await expect(page.locator('h4:has-text("Dispute Submitted!")')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('h4:has-text("Request Submitted!")')).toBeVisible({ timeout: 5000 });
     }
 
     // 2. Test Tab Switching: "Earnings & Payout History"
-    await page.click('a:has-text("Earnings")');
+    await page.click('a:has-text("My Earnings")');
     await expect(page.locator('h3:has-text("GCash Payout History")')).toBeVisible();
     await expect(page.locator('text=Total Earnings').first()).toBeVisible();
 

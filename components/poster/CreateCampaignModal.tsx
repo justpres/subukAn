@@ -252,7 +252,7 @@ export default function CreateCampaignModal({
     >
       <div className="bg-white rounded-[16px] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h3 id="create-campaign-title" className="font-extrabold text-xl text-gray-900">Create New Testing Round</h3>
+          <h3 id="create-campaign-title" className="font-extrabold text-xl text-gray-900">Create a Test Campaign</h3>
           <button 
             type="button"
             onClick={onClose} 
@@ -269,9 +269,9 @@ export default function CreateCampaignModal({
               <Check className="w-6 h-6" aria-hidden="true" />
             </div>
             <div>
-              <h3 className="font-extrabold text-lg text-gray-900">Listing Created & Pending Escrow</h3>
+              <h3 className="font-extrabold text-lg text-gray-900">Campaign Created Successfully!</h3>
               <p className="text-sm text-gray-600 mt-2">
-                Your testing round has been created. Complete the mock payment to activate your listing.
+                Your test campaign is ready. Complete the payment to open it to testers.
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-[12px] border border-gray-100 font-mono text-xs break-all text-blue-600 select-all">
@@ -308,9 +308,9 @@ export default function CreateCampaignModal({
 
             {(Object.keys(errors).length > 0 || submitError) && (
               <div role="alert" className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-[12px] flex gap-3 text-sm">
-                <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
-                  <p className="font-semibold">Please correct the errors:</p>
+                  <p className="font-semibold">Please fix the following:</p>
                   <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
                     {submitError && <li>{submitError}</li>}
                     {Object.entries(errors).map(([key, msg]) => (
@@ -323,36 +323,36 @@ export default function CreateCampaignModal({
 
             {step === 1 && (
               <div className="space-y-4">
-                <h4 className="font-bold text-lg text-slate-800">Step 1: Basics & URL</h4>
+                <h4 className="font-bold text-lg text-slate-800">Step 1: App Info &amp; Link</h4>
                 <div>
-                  <label htmlFor="campaign-form-title" className="block text-sm font-bold mb-1 text-gray-700">Listing Title</label>
+                  <label htmlFor="campaign-form-title" className="block text-sm font-bold mb-1 text-gray-700">Campaign Name</label>
                   <input
                     id="campaign-form-title"
                     type="text"
                     value={formTitle}
                     onChange={e => setFormTitle(e.target.value)}
-                    placeholder="e.g., Rider App Map Pin Accuracy Review"
+                    placeholder="e.g. Food Delivery App Checkout Review"
                     className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-600 text-sm"
                   />
                 </div>
                 <div>
-                  <label htmlFor="campaign-form-url" className="block text-sm font-bold mb-1 text-gray-700">Site URL</label>
+                  <label htmlFor="campaign-form-url" className="block text-sm font-bold mb-1 text-gray-700">Website or App Link</label>
                   <input
                     id="campaign-form-url"
                     type="url"
                     value={formSiteUrl}
                     onChange={e => setFormSiteUrl(e.target.value)}
-                    placeholder="https://example.com — the site testers will visit"
+                    placeholder="https://example.com"
                     className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-600 text-sm"
                   />
                 </div>
                 <div>
-                  <label htmlFor="campaign-form-desc" className="block text-sm font-bold mb-1 text-gray-700">Description</label>
+                  <label htmlFor="campaign-form-desc" className="block text-sm font-bold mb-1 text-gray-700">What should testers do?</label>
                   <textarea
                     id="campaign-form-desc"
                     value={formDescription}
                     onChange={e => setFormDescription(e.target.value)}
-                    placeholder="Describe step-by-step what the tester needs to do and check..."
+                    placeholder="Explain what parts of your app testers should test and what feedback you're looking for..."
                     rows={4}
                     className="w-full p-2.5 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-600 text-sm"
                   />
@@ -362,10 +362,10 @@ export default function CreateCampaignModal({
 
             {step === 2 && (
               <div className="space-y-4">
-                <h4 className="font-bold text-lg text-slate-800">Step 2: Rate & Slots</h4>
+                <h4 className="font-bold text-lg text-slate-800">Step 2: Rewards &amp; Tester Count</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="campaign-form-rate" className="block text-sm font-bold mb-1 text-gray-700">Rate per Tester</label>
+                    <label htmlFor="campaign-form-rate" className="block text-sm font-bold mb-1 text-gray-700">Reward per Tester</label>
                     <select
                       id="campaign-form-rate"
                       value={formRate}
@@ -381,11 +381,11 @@ export default function CreateCampaignModal({
                   </div>
                   <div>
                     <label htmlFor="campaign-form-slots" className="block text-sm font-bold mb-1 text-gray-700 flex items-center gap-1">
-                      Slots Count 
+                      Number of Testers Needed
                       <span className="group relative">
-                        <HelpCircle className="w-3.5 h-3.5 text-gray-500 cursor-pointer" aria-label="Slot count instructions" />
+                        <HelpCircle className="w-3.5 h-3.5 text-gray-500 cursor-pointer" aria-label="Tester count instructions" />
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] rounded-[4px] p-2 w-48 hidden group-hover:block z-10 font-normal">
-                          Must be 1 (for preview round) or between 3 and 100.
+                          Choose 1 for a quick preview or between 3 and 100 testers.
                         </span>
                       </span>
                     </label>
@@ -399,7 +399,7 @@ export default function CreateCampaignModal({
                   </div>
                 </div>
                 <div>
-                  <span className="block text-sm font-bold mb-1 text-gray-700">Poster Review Window</span>
+                  <span className="block text-sm font-bold mb-1 text-gray-700">Creator Review Window</span>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                       <input
@@ -409,7 +409,7 @@ export default function CreateCampaignModal({
                         onChange={() => setFormReviewWindow(30)}
                         className="text-blue-600 focus:ring-blue-500"
                       />
-                      30 minutes (Fast validation)
+                      30 minutes (Fast review)
                     </label>
                     <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                       <input
@@ -419,7 +419,7 @@ export default function CreateCampaignModal({
                         onChange={() => setFormReviewWindow(60)}
                         className="text-blue-600 focus:ring-blue-500"
                       />
-                      60 minutes (Standard listing)
+                      60 minutes (Standard review)
                     </label>
                   </div>
                 </div>
@@ -428,17 +428,17 @@ export default function CreateCampaignModal({
 
             {step === 3 && (
               <div className="space-y-4">
-                <h4 className="font-bold text-lg text-slate-800">Step 3: Target Demographics</h4>
+                <h4 className="font-bold text-lg text-slate-800">Step 3: Target Testers (Optional)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="target-age-group-select" className="block text-xs font-bold text-gray-700 mb-1">Target Age Group</label>
+                    <label htmlFor="target-age-group-select" className="block text-xs font-bold text-gray-700 mb-1">Age Group</label>
                     <select
                       id="target-age-group-select"
                       value={targetAgeGroup}
                       onChange={e => setTargetAgeGroup(e.target.value)}
                       className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                     >
-                      <option value="">All Age Groups</option>
+                      <option value="">All Ages</option>
                       <option value="18-24">18 - 24 years old</option>
                       <option value="25-34">25 - 34 years old</option>
                       <option value="35-44">35 - 44 years old</option>
@@ -446,7 +446,7 @@ export default function CreateCampaignModal({
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="target-gender-select" className="block text-xs font-bold text-gray-700 mb-1">Target Gender</label>
+                    <label htmlFor="target-gender-select" className="block text-xs font-bold text-gray-700 mb-1">Gender</label>
                     <select
                       id="target-gender-select"
                       value={targetGender}
@@ -460,14 +460,14 @@ export default function CreateCampaignModal({
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="target-employment-select" className="block text-xs font-bold text-gray-700 mb-1">Employment Status</label>
+                    <label htmlFor="target-employment-select" className="block text-xs font-bold text-gray-700 mb-1">Employment</label>
                     <select
                       id="target-employment-select"
                       value={targetEmploymentStatus}
                       onChange={e => setTargetEmploymentStatus(e.target.value)}
                       className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                     >
-                      <option value="">All Employment Statuses</option>
+                      <option value="">All Employment Types</option>
                       <option value="employed">Employed</option>
                       <option value="unemployed">Unemployed</option>
                       <option value="student">Student</option>
@@ -475,17 +475,17 @@ export default function CreateCampaignModal({
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="target-tech-literacy-select" className="block text-xs font-bold text-gray-700 mb-1">Target Tech Literacy</label>
+                    <label htmlFor="target-tech-literacy-select" className="block text-xs font-bold text-gray-700 mb-1">Tech Experience</label>
                     <select
                       id="target-tech-literacy-select"
                       value={targetTechLiteracy}
                       onChange={e => setTargetTechLiteracy(e.target.value)}
                       className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                     >
-                      <option value="">All Literacy Levels</option>
-                      <option value="non_technical">Non-Technical</option>
-                      <option value="casual_user">Casual User</option>
-                      <option value="student_dev">Developer / Technical</option>
+                      <option value="">All Experience Levels</option>
+                      <option value="non_technical">Beginner / Non-Technical</option>
+                      <option value="casual_user">Everyday Smartphone User</option>
+                      <option value="student_dev">Tech-Savvy / Developer</option>
                     </select>
                   </div>
                 </div>
@@ -512,7 +512,7 @@ export default function CreateCampaignModal({
                           else setTargetAccessibilityTags(targetAccessibilityTags.filter(t => t !== 'keyboard_only'))
                         }}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      /> Requires Keyboard-Only Nav
+                      /> Requires Keyboard-Only Navigation
                     </label>
                   </div>
                 </div>
@@ -521,11 +521,11 @@ export default function CreateCampaignModal({
 
             {step === 4 && (
               <div className="space-y-4">
-                <h4 className="font-bold text-lg text-slate-800">Step 4: Verification Questions</h4>
+                <h4 className="font-bold text-lg text-slate-800">Step 4: Questions &amp; Tasks</h4>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold text-gray-800">Testing Steps ({formQuestions.length})</span>
+                  <span className="text-sm font-bold text-gray-800">Tasks for Testers ({formQuestions.length})</span>
                   <button type="button" onClick={handleAddQuestion} className="text-xs font-semibold text-blue-600 hover:text-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-xs">
-                    + Add Question
+                    + Add Task
                   </button>
                 </div>
                 <div className="space-y-4">
@@ -535,20 +535,20 @@ export default function CreateCampaignModal({
                         <button 
                           type="button" 
                           onClick={() => handleRemoveQuestion(idx)} 
-                          aria-label={`Delete question ${idx + 1}`}
+                          aria-label={`Delete task ${idx + 1}`}
                           className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                         >
                           <Trash2 className="w-4 h-4" aria-hidden="true" />
                         </button>
                       )}
                       <div>
-                        <label htmlFor={`question-text-${idx}`} className="block text-xs font-bold text-gray-700 mb-1">Question {idx + 1}</label>
+                        <label htmlFor={`question-text-${idx}`} className="block text-xs font-bold text-gray-700 mb-1">Task / Question {idx + 1}</label>
                         <input
                           id={`question-text-${idx}`}
                           type="text"
                           value={q.question_text}
                           onChange={e => handleQuestionTextChange(idx, e.target.value)}
-                          placeholder="e.g. Can you complete checkout?"
+                          placeholder="e.g. Try adding an item to the cart and checking out"
                           className="w-full p-2 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-600 bg-white"
                         />
                       </div>
@@ -559,7 +559,7 @@ export default function CreateCampaignModal({
                         </label>
                         <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
                           <input type="checkbox" checked={q.requires_image} onChange={() => handleCheckboxChange(idx, 'requires_image')} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                          Requires Image Screenshot
+                          Requires Screenshot
                         </label>
                       </div>
                     </div>
@@ -582,7 +582,7 @@ export default function CreateCampaignModal({
                   {isQuickImpression && (
                     <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-[12px] space-y-3">
                       <div className="flex items-center gap-2">
-                        <label htmlFor="impression-duration-input" className="text-xs font-bold text-gray-700">Impression Duration (Sec):</label>
+                        <label htmlFor="impression-duration-input" className="text-xs font-bold text-gray-700">Display Duration (Seconds):</label>
                         <input id="impression-duration-input" type="number" min={5} max={30} value={impressionDurationSeconds} onChange={e => setImpressionDurationSeconds(Number(e.target.value))} className="w-20 p-1 border border-gray-200 rounded-[6px] text-xs focus:outline-none text-center bg-white focus-visible:ring-2 focus-visible:ring-blue-600" />
                       </div>
                     </div>
@@ -592,7 +592,7 @@ export default function CreateCampaignModal({
                 <div className="space-y-3 border-t border-gray-100 pt-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-bold text-gray-800 block">Enable A/B Comparative Testing</span>
+                      <span className="text-sm font-bold text-gray-800 block">Enable A/B Version Comparison</span>
                     </div>
                     <input 
                       type="checkbox" 
@@ -614,7 +614,7 @@ export default function CreateCampaignModal({
                               onChange={e => {
                                 const updated = [...formVariants]; updated[idx].title = e.target.value; setFormVariants(updated);
                               }} 
-                              placeholder="Variant Label" 
+                              placeholder="Version Label (e.g. Version A)" 
                               className="w-full p-2 border border-gray-200 rounded-[8px] text-xs bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600" 
                             />
                           </div>
@@ -626,7 +626,7 @@ export default function CreateCampaignModal({
                               onChange={e => {
                                 const updated = [...formVariants]; updated[idx].url = e.target.value; setFormVariants(updated);
                               }} 
-                              placeholder="App URL" 
+                              placeholder="Version Link (https://...)" 
                               className="w-full p-2 border border-gray-200 rounded-[8px] text-xs bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600" 
                             />
                           </div>
@@ -638,10 +638,10 @@ export default function CreateCampaignModal({
                 
                 <div className="space-y-3 border-t border-gray-100 pt-4">
                   <div>
-                    <label htmlFor="parent-listing-benchmark-select" className="text-sm font-bold text-gray-800 block mb-1">Link to Previous Round (Benchmarking)</label>
+                    <label htmlFor="parent-listing-benchmark-select" className="text-sm font-bold text-gray-800 block mb-1">Compare with Previous Campaign</label>
                   </div>
                   <select id="parent-listing-benchmark-select" value={parentListingId} onChange={e => setParentListingId(e.target.value)} className="w-full p-2 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
-                    <option value="">No parent / First round</option>
+                    <option value="">None / Standalone campaign</option>
                     {listings.map(l => (
                       <option key={l.id} value={l.id}>{l.title}</option>
                     ))}
@@ -653,14 +653,14 @@ export default function CreateCampaignModal({
 
             {step === 5 && (
               <div className="space-y-4">
-                <h4 className="font-bold text-lg text-slate-800">Step 5: Escrow Confirm</h4>
+                <h4 className="font-bold text-lg text-slate-800">Step 5: Review &amp; Fund</h4>
                 <div className="p-6 bg-blue-50 border border-blue-100 rounded-[12px] flex flex-col items-center justify-center text-center space-y-2">
-                  <span className="text-gray-700 text-sm font-medium">Total Escrow Budget</span>
+                  <span className="text-gray-700 text-sm font-medium">Total Campaign Budget</span>
                   <span className="text-4xl font-black text-blue-800">₱{formRate * formSlots}</span>
-                  <span className="text-xs text-gray-600 mt-2">({formSlots} slots at ₱{formRate}/each)</span>
+                  <span className="text-xs text-gray-600 mt-2">({formSlots} testers at ₱{formRate} each)</span>
                 </div>
                 <p className="text-sm text-gray-700 text-center">
-                  Review your settings and click confirm to deposit the funds to the escrow account via Mock PayMongo checkout.
+                  Click confirm to set aside the campaign budget. Testers will be paid automatically once you approve their submissions.
                 </p>
               </div>
             )}

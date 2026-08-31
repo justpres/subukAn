@@ -138,7 +138,7 @@ export default function LoginPage() {
               Welcome back
             </h1>
             <p className="text-sm text-[#5E5E5E] leading-relaxed">
-              Sign in to manage listings, submit app tests, and track secure escrow payouts.
+              Sign in to create test campaigns or complete tasks and earn money.
             </p>
           </div>
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
             <div className="mb-6 flex gap-3 items-start p-4 bg-[#FFE4E6] border border-[#FFE4E6] text-[#9F1239] rounded-button text-sm">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold mb-1">Authentication Error</p>
+                <p className="font-semibold mb-1">Sign-In Error</p>
                 <p className="opacity-90">{error}</p>
               </div>
             </div>
@@ -289,13 +289,13 @@ export default function LoginPage() {
             <div className="flex items-start gap-2.5">
               <div className="w-1.5 h-1.5 rounded-full bg-[#2B6CB0] mt-1.5 shrink-0" />
               <p>
-                <strong>Role Routing:</strong> After authenticating, you will choose whether to enter the <strong>Poster Dashboard</strong> (to post test listings and set up escrow) or the <strong>Tester Dashboard</strong> (to complete task checklists and receive payments).
+                <strong>Pick Your Role:</strong> After signing in, choose whether you want to <strong>test your own app</strong> or <strong>earn money as a tester</strong>.
               </p>
             </div>
             <div className="flex items-start gap-2.5">
               <div className="w-1.5 h-1.5 rounded-full bg-[#2B6CB0] mt-1.5 shrink-0" />
               <p>
-                <strong>Secure Escrow:</strong> Testing allocations are secured safely via our integrated payment gateway (PayMongo/Xendit) before tasks are released.
+                <strong>Protected Payouts:</strong> Test rewards are funded in advance so testers always receive their money upon completing tasks.
               </p>
             </div>
           </div>

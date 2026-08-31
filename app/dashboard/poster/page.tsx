@@ -926,7 +926,7 @@ function PosterDashboardContent() {
                 </div>
 
                 <div className="my-3">
-                  <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">Total Locked Funds</span>
+                  <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">Total Testing Budget</span>
                   <div className="font-mono text-3xl font-extrabold text-white tracking-tight">
                     ₱{totalEscrow.toLocaleString()}
                   </div>
@@ -934,13 +934,13 @@ function PosterDashboardContent() {
 
                 <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/50">
                   <div className="border-r border-slate-700/50 pr-2">
-                    <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Allocated to Active Listings</span>
+                    <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Active Campaigns</span>
                     <span className="font-mono text-xs sm:text-sm font-bold text-slate-100 block">
                       ₱{totalEscrow.toLocaleString()}
                     </span>
                   </div>
                   <div className="pl-1">
-                    <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Available / Idle</span>
+                    <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Remaining Budget</span>
                     <span className="font-mono text-xs sm:text-sm font-bold text-slate-100 block">
                       ₱{calculateUnallocated().toLocaleString()}
                     </span>
@@ -957,7 +957,7 @@ function PosterDashboardContent() {
                     <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                       <Users className="w-4 h-4" />
                     </div>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Campaigns & Slots</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Campaigns &amp; Testers</span>
                   </div>
                   <span className="inline-flex items-center text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/60 rounded-full px-2.5 py-0.5 shrink-0">
                     {activeCampaignsCount} Active
@@ -965,13 +965,13 @@ function PosterDashboardContent() {
                 </div>
 
                 <div className="my-3">
-                  <span className="text-xs text-slate-400 font-medium block mb-1">Testing Slots Claimed</span>
+                  <span className="text-xs text-slate-400 font-medium block mb-1">Testers Joined</span>
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono text-3xl sm:text-4xl font-extrabold text-slate-900">
                       {totalFilledSlots}
                     </span>
                     <span className="text-slate-400 font-mono text-base sm:text-lg font-medium">
-                      / {totalCountSlots} slots
+                      / {totalCountSlots} testers
                     </span>
                   </div>
                 </div>
@@ -979,7 +979,7 @@ function PosterDashboardContent() {
 
               <div className="pt-3.5 border-t border-slate-100 mt-2 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px] font-medium">
-                  <span className="text-slate-500">Slot Utilization Rate</span>
+                  <span className="text-slate-500">Tester Capacity Filled</span>
                   <span className="font-bold text-slate-800 font-mono">{slotUtilizationRate}%</span>
                 </div>
                 <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -999,15 +999,15 @@ function PosterDashboardContent() {
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Disbursed Testing Payouts</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Paid to Testers</span>
                   </div>
                   <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-full px-2.5 py-0.5 shrink-0">
-                    {releasedCampaignsCount} Released
+                    {releasedCampaignsCount} Completed
                   </span>
                 </div>
 
                 <div className="my-3">
-                  <span className="text-xs text-slate-400 font-medium block mb-1">Total Released Payouts</span>
+                  <span className="text-xs text-slate-400 font-medium block mb-1">Total Paid Out</span>
                   <div className="font-mono text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                     ₱{spentPayouts.toLocaleString()}
                   </div>
@@ -1015,7 +1015,7 @@ function PosterDashboardContent() {
               </div>
 
               <div className="pt-3.5 border-t border-slate-100 mt-2 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 font-medium">Directly credited to tester GCash</span>
+                <span className="text-slate-500 font-medium">Sent directly to tester GCash</span>
                 <span className="font-bold text-emerald-600 flex items-center gap-1 font-mono">
                   <Check className="w-3.5 h-3.5" /> Verified
                 </span>
@@ -1029,15 +1029,15 @@ function PosterDashboardContent() {
             <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Escrow & Efficiency Insights</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Budget &amp; Activity Insights</span>
                   <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-full px-2.5 py-0.5">
-                    Active Insights
+                    Insights
                   </span>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <span className="text-xs text-slate-400 font-medium block mb-2">Cumulative Daily Escrow Allocations</span>
+                    <span className="text-xs text-slate-400 font-medium block mb-2">Total Testing Budget Over Time</span>
                     <div className="h-44">
                       <ErrorBoundary>
                         <AreaChart
@@ -1063,7 +1063,7 @@ function PosterDashboardContent() {
                   </div>
                   
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 font-medium">Average Reviewer Response Speed</span>
+                    <span className="text-xs text-slate-500 font-medium">Average Review Time</span>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
                       <Clock className="w-3.5 h-3.5 text-blue-600" />
                       <span>14m avg speed</span>

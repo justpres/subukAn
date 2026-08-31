@@ -54,17 +54,17 @@ interface TaskResponseState {
   image_url?: string | null;
 }
 
-const NDA_CONTENT = `subukAn Tester Agreement & NDA
+const NDA_CONTENT = `subukAn Tester Agreement
 
-By participating in this test, you agree to the following binding conditions:
+By participating in this test, you agree to the following rules:
 
-1. HONEST & HIGH-EFFORT COMPLETION: You must execute all tasks exactly as described. Payment is strictly subject to the poster's review. Submission of spam, low-effort summaries, or fake proofs will result in immediate disqualification and account flag.
+1. DO YOUR BEST WORK: Follow each instruction step carefully and provide genuine, helpful feedback. Spam or fake submissions will be rejected.
 
-2. CONFIDENTIALITY: The application under test, its features, screenshots, and internal workings are strictly confidential. You may not distribute, discuss, or share any media, screenshots, recordings, or code outside the subukAn portal.
+2. KEEP IT PRIVATE: The app being tested is confidential. Do not share screenshots, videos, or information about this test outside subukAn.
 
-3. SCREEN RECORDING AND EVIDENCE: You agree to keep the screen recorder running for the entire duration of the test. The recording must clearly show the steps you perform.
+3. SCREEN RECORDING: If a step requires recording, keep screen recording active during that step to show what you did.
 
-4. ESCROW RELEASES: Funds are held safely in escrow. Upon submission, the poster has up to 30 or 60 minutes to review. If they do not take action, payment is automatically released.
+4. SAFE PAYOUTS: The creator reviews your submission within 30 to 60 minutes. Once approved (or if the timer runs out), your reward is sent directly to your GCash.
 
 Scroll down and review all terms to accept.`;
 
@@ -1136,7 +1136,7 @@ export default function TaskWorkspacePage() {
                           <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                             <div>
                               <label htmlFor={`response-text-${task.id}`} className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 select-none">
-                                Your Response Details (minimum 10 characters)
+                                Your Feedback &amp; Findings (minimum 10 characters)
                               </label>
                               <textarea
                                 id={`response-text-${task.id}`}
@@ -1157,7 +1157,7 @@ export default function TaskWorkspacePage() {
                             {/* 1-5 Difficulty score */}
                             <div>
                               <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 select-none">
-                                Task Difficulty Rating
+                                How easy or difficult was this step?
                               </span>
                               <div className="flex gap-2" role="group" aria-label="Task Difficulty Rating (1 to 5)">
                                 {[1, 2, 3, 4, 5].map((val) => (

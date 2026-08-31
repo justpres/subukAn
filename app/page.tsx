@@ -182,11 +182,11 @@ export default function Home() {
             <span>Now Live in the Philippines</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold text-ink tracking-tight leading-tight mb-6">
-            Guaranteed QA results.<br />
-            Backed by secure escrow.
+            Real feedback from real users.<br />
+            Protected payments.
           </h1>
           <p className="text-lg md:text-xl text-slate max-w-2xl mx-auto mb-10 leading-relaxed">
-            subukAn connects tech builders with real local testers. Funds are secured in escrow before testing begins, delivering clean bugs for developers and guaranteed payouts for testers.
+            subukAn connects app creators with everyday testers across the Philippines. Test tasks are funded in advance so testers always get paid and creators get honest feedback.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -198,7 +198,7 @@ export default function Home() {
                       href="/auth/login?role=poster" 
                       className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-button text-base transition-all flex items-center justify-center space-x-2"
                     >
-                      <span>Build & Deploy Tests</span>
+                      <span>Post a Test</span>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
@@ -207,7 +207,7 @@ export default function Home() {
                       href="/auth/login?role=tester" 
                       className="w-full sm:w-auto px-8 py-4 border border-steel hover:border-slate text-ink bg-white font-bold rounded-button text-base transition-all hover:bg-canvas flex items-center justify-center space-x-2"
                     >
-                      <span>Become a Tester</span>
+                      <span>Start Testing &amp; Earn</span>
                       <svg className="w-5 h-5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -218,7 +218,7 @@ export default function Home() {
                     href="/dashboard" 
                     className="w-full sm:w-auto px-12 py-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-button text-base transition-all flex items-center justify-center space-x-2 shadow-md"
                   >
-                    <span>Open Dashboard Workspace</span>
+                    <span>Open Dashboard</span>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
@@ -236,32 +236,32 @@ export default function Home() {
           <div className="bg-white border border-steel/40 rounded-card p-6 md:p-8 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-steel mb-1">Conceptual Model: Active Escrow Protection</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-steel mb-1">How It Works: Safe &amp; Fair Payments</h3>
                 <h2 className="text-xl font-bold text-ink mb-2">How subukAn protects your money and time</h2>
-                <p className="text-sm text-slate">Funds are committed upfront and auto-locked in escrow. Every step is clearly signaled to both poster and tester.</p>
+                <p className="text-sm text-slate">Payments are set aside safely upfront. Both creators and testers can track each stage clearly.</p>
               </div>
               <div className="flex-1 max-w-md w-full">
                 {/* Mock Escrow Status Bar */}
                 <div className="border border-steel/30 rounded-button bg-canvas p-4 text-xs">
                   <div className="flex justify-between items-center mb-3">
-                    <span className="font-bold text-ink">GCash Flow Integration Audit</span>
-                    <span className="font-semibold text-primary">₱500 held in Escrow</span>
+                    <span className="font-bold text-ink">E-Commerce Checkout Test</span>
+                    <span className="font-semibold text-primary">₱500 Budget Reserved</span>
                   </div>
                   {/* Status Steps */}
                   <div className="grid grid-cols-3 gap-2 relative">
                     <div className="text-center p-2 rounded bg-tint-open text-tint-open-text font-semibold border border-tint-open-text/10">
-                      1. Reserved
+                      1. Budget Set Aside
                     </div>
                     <div className="text-center p-2 rounded bg-tint-filling text-tint-filling-text font-semibold border border-tint-filling-text/10">
-                      2. Under Review
+                      2. Tester Completes Task
                     </div>
                     <div className="text-center p-2 rounded bg-tint-released text-tint-released-text font-semibold border border-tint-released-text/10">
-                      3. Released
+                      3. Payout Sent
                     </div>
                   </div>
                   <div className="mt-3 text-[10px] text-slate flex justify-between items-center">
-                    <span>3 of 5 testing slots filled</span>
-                    <span className="underline cursor-pointer">View Escrow Contract</span>
+                    <span>3 of 5 testing spots taken</span>
+                    <span className="text-primary font-medium">Guaranteed Payout</span>
                   </div>
                 </div>
               </div>
@@ -361,9 +361,9 @@ export default function Home() {
       <section id="pricing" className="py-20 bg-white border-b border-steel/20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-ink tracking-tight mb-4">Flexible, Performance-Based Pricing</h2>
+            <h2 className="text-3xl font-extrabold text-ink tracking-tight mb-4">Simple, Transparent Pricing</h2>
             <p className="text-lg text-slate max-w-2xl mx-auto">
-              From fast sanity checks to deep usability audits. Pay only for verified, high-quality test completions.
+              Choose the level of feedback you need. Pay only when testers complete your checklist.
             </p>
           </div>
 
@@ -371,12 +371,12 @@ export default function Home() {
             {/* Card 1 */}
             <div className="border border-steel/40 rounded-card p-8 bg-canvas flex flex-col justify-between hover:border-slate transition-all relative">
               <div>
-                <div className="absolute top-4 right-4 badge-status badge-open">Micro Task</div>
-                <h3 className="text-xl font-bold text-ink mb-2">Micro-Verifications</h3>
-                <p className="text-slate text-sm mb-6">Verify critical fields, single-page responsiveness, layout compliance, or copy bugs.</p>
+                <div className="absolute top-4 right-4 badge-status badge-open">Quick Check</div>
+                <h3 className="text-xl font-bold text-ink mb-2">Quick Tests</h3>
+                <p className="text-slate text-sm mb-6">Verify single pages, responsive layouts, or button clicks in 5–10 minutes.</p>
                 <div className="mb-6">
                   <span className="text-3xl font-extrabold text-ink">₱50 - ₱150</span>
-                  <span className="text-slate text-sm"> / test completion</span>
+                  <span className="text-slate text-sm"> / completed test</span>
                 </div>
                 <ul className="space-y-3 text-sm text-slate border-t border-steel/20 pt-6 mb-8">
                   <li className="flex items-center space-x-2">
@@ -385,11 +385,11 @@ export default function Home() {
                   </li>
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Visual bug screenshot verification</span>
+                    <span>Screenshots &amp; visual feedback</span>
                   </li>
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Fast feedback within 12 hours</span>
+                    <span>Fast results within hours</span>
                   </li>
                 </ul>
               </div>
@@ -397,32 +397,32 @@ export default function Home() {
                 href={user ? "/dashboard/poster?tier=micro" : "/auth/login?role=poster"}
                 className="w-full text-center py-3 bg-white border border-steel hover:border-slate text-ink rounded-button text-sm font-bold transition-all hover:bg-canvas"
               >
-                Create Micro Test
+                Start Quick Test
               </Link>
             </div>
 
             {/* Card 2 */}
             <div className="border-2 border-primary rounded-card p-8 bg-white flex flex-col justify-between shadow-md relative">
-              <div className="absolute top-4 right-4 badge-status badge-filling">Recommended</div>
+              <div className="absolute top-4 right-4 badge-status badge-filling">Most Popular</div>
               <div>
-                <h3 className="text-xl font-bold text-ink mb-2">Functional Walks</h3>
-                <p className="text-slate text-sm mb-6">Test complete multi-step actions like registration, product checkouts, or localized GCash flows.</p>
+                <h3 className="text-xl font-bold text-ink mb-2">Feature Walks</h3>
+                <p className="text-slate text-sm mb-6">Test complete user flows like signups, shopping carts, or GCash checkouts.</p>
                 <div className="mb-6">
                   <span className="text-3xl font-extrabold text-ink">₱200 - ₱500</span>
-                  <span className="text-slate text-sm"> / test completion</span>
+                  <span className="text-slate text-sm"> / completed test</span>
                 </div>
                 <ul className="space-y-3 text-sm text-slate border-t border-steel/20 pt-6 mb-8">
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Detailed user journey verification</span>
+                    <span>Step-by-step user walkthrough</span>
                   </li>
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>System log & API response audits</span>
+                    <span>Full screen recording included</span>
                   </li>
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Detailed replication steps file</span>
+                    <span>Clear step-by-step issue notes</span>
                   </li>
                 </ul>
               </div>
@@ -430,32 +430,32 @@ export default function Home() {
                 href={user ? "/dashboard/poster?tier=functional" : "/auth/login?role=poster"}
                 className="w-full text-center py-3 bg-primary hover:bg-primary-hover text-white rounded-button text-sm font-bold transition-all shadow-sm"
               >
-                Create Functional Test
+                Start Feature Walk
               </Link>
             </div>
 
             {/* Card 3 */}
             <div className="border border-steel/40 rounded-card p-8 bg-canvas flex flex-col justify-between hover:border-slate transition-all relative">
-              <div className="absolute top-4 right-4 badge-status badge-review">Comprehensive</div>
+              <div className="absolute top-4 right-4 badge-status badge-review">In-Depth</div>
               <div>
-                <h3 className="text-xl font-bold text-ink mb-2">Deep Audits</h3>
-                <p className="text-slate text-sm mb-6">Complete test suite execution, screen recordings, network trace analyses, and edge-case hunting.</p>
+                <h3 className="text-xl font-bold text-ink mb-2">Complete App Reviews</h3>
+                <p className="text-slate text-sm mb-6">Comprehensive testing across devices, full video recordings, and detailed feedback.</p>
                 <div className="mb-6">
                   <span className="text-3xl font-extrabold text-ink">₱1,000+</span>
-                  <span className="text-slate text-sm"> / test completion</span>
+                  <span className="text-slate text-sm"> / completed test</span>
                 </div>
                 <ul className="space-y-3 text-sm text-slate border-t border-steel/20 pt-6 mb-8">
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Screen recording + video walkthrough</span>
+                    <span>Screen recording &amp; voiceover notes</span>
                   </li>
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Network traffic & payload inspection</span>
+                    <span>Cross-device &amp; browser tests</span>
                   </li>
                   <li className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Direct bug integration push (e.g. Jira)</span>
+                    <span>Detailed bug list ready for dev fixes</span>
                   </li>
                 </ul>
               </div>
@@ -463,7 +463,7 @@ export default function Home() {
                 href={user ? "/dashboard/poster?tier=audit" : "/auth/login?role=poster"}
                 className="w-full text-center py-3 bg-white border border-steel hover:border-slate text-ink rounded-button text-sm font-bold transition-all hover:bg-canvas"
               >
-                Request Deep Audit
+                Request Complete Review
               </Link>
             </div>
           </div>

@@ -70,17 +70,17 @@ export function DisputeModal({
             </div>
             <div>
               <h3 id="dispute-modal-title" className="font-extrabold text-lg text-gray-900">
-                Submit Rejection Dispute
+                Request a Second Review
               </h3>
               <p className="text-xs text-gray-500 mt-0.5">
-                {listingTitle ? `For "${listingTitle}"` : 'Request independent support re-evaluation.'}
+                {listingTitle ? `For "${listingTitle}"` : 'Ask our team to review your rejected submission.'}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close rejection dispute modal"
+            aria-label="Close review request modal"
             className="p-1 text-gray-400 hover:text-gray-600 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
           >
             <X className="w-5 h-5" aria-hidden="true" />
@@ -94,23 +94,23 @@ export function DisputeModal({
               <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-200">
                 <CheckCircle2 className="w-6 h-6" aria-hidden="true" />
               </div>
-              <h4 className="font-bold text-gray-900 text-base">Dispute Submitted!</h4>
+              <h4 className="font-bold text-gray-900 text-base">Request Submitted!</h4>
               <p className="text-xs text-gray-500 max-w-xs mx-auto">
-                Your dispute has been logged. Escrow funds will remain locked until support resolves the claim.
+                Your review request has been received. Our team will look at your submission and update you shortly.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-[8px] p-3 text-xs text-amber-900 leading-relaxed">
                 <span className="font-bold flex items-center gap-1 mb-1">
-                  <Scale className="w-3.5 h-3.5 text-amber-700 inline" aria-hidden="true" /> Fair Dispute Policy
+                  <Scale className="w-3.5 h-3.5 text-amber-700 inline" aria-hidden="true" /> Fair Review Policy
                 </span>
-                Disputes are reviewed by subukAn support. Provide clear details explaining why your completed work satisfied the task requirements.
+                Our support team will carefully review your submitted recordings, screenshots, and task answers to ensure a fair decision.
               </div>
 
               <div>
                 <label htmlFor="dispute-reason-select" className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Primary Dispute Reason
+                  Reason for review request
                 </label>
                 <select
                   id="dispute-reason-select"
@@ -126,14 +126,14 @@ export function DisputeModal({
 
               <div>
                 <label htmlFor="dispute-explanation-textarea" className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Dispute Explanation & Rationale
+                  Please describe what happened during your test
                 </label>
                 <textarea
                   id="dispute-explanation-textarea"
                   required
                   value={disputeExplanation}
                   onChange={e => setDisputeExplanation(e.target.value)}
-                  placeholder="Explain why the rejection was unfair, referencing your uploaded screen recording or screenshot evidence..."
+                  placeholder="Explain why your test should be approved and mention what evidence you provided..."
                   rows={4}
                   className="w-full p-3 border border-gray-200 rounded-[8px] text-xs focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 focus-visible:ring-2 focus-visible:ring-rose-500"
                 />
@@ -170,7 +170,7 @@ export function DisputeModal({
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {submitting ? 'Submitting Dispute...' : 'Submit Dispute'}
+                  {submitting ? 'Sending Request...' : 'Send Request'}
                 </button>
               </div>
             </form>

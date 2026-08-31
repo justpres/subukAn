@@ -21,12 +21,12 @@ test.describe('Poster Flow E2E', () => {
     await page.click('text=Create New Listing');
 
     // Wait for modal form to be visible
-    await expect(page.locator('text=Create New Testing Round')).toBeVisible();
+    await expect(page.locator('text=Create a Test Campaign')).toBeVisible();
 
     const uniqueTitle = `E2E Test Listing ${Date.now()}`;
-    await page.fill('input[placeholder*="Rider App Map Pin"]', uniqueTitle);
+    await page.fill('#campaign-form-title', uniqueTitle);
     await page.fill(
-      'textarea[placeholder*="Describe step-by-step"]',
+      '#campaign-form-desc',
       'This is a long mock description that contains at least twenty characters to satisfy schema validation rules.'
     );
 
@@ -34,7 +34,7 @@ test.describe('Poster Flow E2E', () => {
     await page.click('button:has-text("Next")');
 
     // Select Rate per Tester (e.g. 200)
-    await page.selectOption('select:has-text("per tester")', '200');
+    await page.selectOption('select#campaign-form-rate', '200');
 
     // Fill slots
     await page.fill('input[type="number"]', '5');
@@ -44,9 +44,9 @@ test.describe('Poster Flow E2E', () => {
 
     // Select Demographic filters: Tech Literacy and Age Group
     // Age Group: 25-34 years old
-    await page.selectOption('label:has-text("Target Age Group") + select', '25-34');
+    await page.selectOption('select#target-age-group-select', '25-34');
     // Tech Literacy: Non-Technical
-    await page.selectOption('label:has-text("Target Tech Literacy") + select', 'non_technical');
+    await page.selectOption('select#target-tech-literacy-select', 'non_technical');
 
     // Add accessibility requirements (Requires Screen Reader - which is index 0 checkbox on step 3)
     await page.locator('input[type="checkbox"]').first().check();
