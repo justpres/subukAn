@@ -147,8 +147,8 @@ export default function Home() {
       {/* Hero Section */}
       <section className="py-20 md:py-28 bg-white border-b border-steel/20">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center space-x-2 bg-tint-open/60 text-tint-open-text text-xs font-semibold px-3 py-1 rounded-full mb-6">
-            <span className="w-1.5 h-1.5 bg-tint-open-text rounded-full animate-pulse"></span>
+          <div className="inline-flex items-center gap-2 bg-slate-100/90 border border-slate-200/80 text-slate-700 text-xs font-semibold px-3 py-1 rounded-md mb-6 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span>
             <span>Now Live in the Philippines</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold text-ink tracking-tight leading-tight mb-6">
@@ -245,8 +245,8 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
             <div>
-              <div className="inline-flex items-center space-x-2 bg-tint-open/60 text-tint-open-text text-xs font-semibold px-3 py-1 rounded-full mb-3">
-                <span className="w-1.5 h-1.5 bg-tint-open-text rounded-full animate-pulse"></span>
+              <div className="inline-flex items-center gap-2 bg-slate-100/90 border border-slate-200/80 text-slate-700 text-xs font-semibold px-3 py-1 rounded-md mb-3 shadow-2xs font-mono">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0"></span>
                 <span>Live Marketplace Feed</span>
               </div>
               <h2 className="text-3xl font-extrabold text-ink tracking-tight">Available Test Tasks</h2>
@@ -311,8 +311,11 @@ export default function Home() {
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="badge-status badge-open">Open Sky</span>
-                        <span className="text-xs font-bold text-slate bg-canvas px-2.5 py-1 rounded-full border border-steel/30">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          Open
+                        </span>
+                        <span className="inline-flex items-center text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 font-mono">
                           {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left
                         </span>
                       </div>

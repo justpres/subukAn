@@ -256,44 +256,44 @@ function PosterDashboardContent() {
     switch (status) {
       case 'open':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-sky-700 font-medium bg-sky-50 border border-sky-200/60 rounded-md px-2.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>Open / Funding
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>Open / Funding
           </span>
         )
       case 'filling':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 font-medium bg-amber-50 border border-amber-200/60 rounded-md px-2.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Active (Filling)
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>Active (Filling)
           </span>
         )
       case 'review':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-purple-700 font-medium bg-purple-50 border border-purple-200/60 rounded-md px-2.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>Under Review
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>Under Review
           </span>
         )
       case 'released':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-medium bg-emerald-50 border border-emerald-200/60 rounded-md px-2.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Released
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>Released
           </span>
         )
       case 'rejected':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-rose-700 font-medium bg-rose-50 border border-rose-200/60 rounded-md px-2.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Rejected
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>Rejected
           </span>
         )
       case 'expired':
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100 border border-slate-200 rounded-md px-2.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Expired
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>Expired
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100 border border-slate-200 rounded-md px-2.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>{status || 'Unknown'}
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>{status || 'Unknown'}
           </span>
         )
     }
@@ -545,13 +545,13 @@ function PosterDashboardContent() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-slate-900">Simulation Status</span>
                       {paymentSettings.sandbox_mode ? (
-                        <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5 inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 inline-flex items-center gap-1.5 shadow-2xs font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                           Simulation Active
                         </span>
                       ) : (
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5 inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 inline-flex items-center gap-1.5 shadow-2xs font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                           Live Billing
                         </span>
                       )}
@@ -994,7 +994,8 @@ function PosterDashboardContent() {
                     </div>
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Campaigns &amp; Testers</span>
                   </div>
-                  <span className="inline-flex items-center text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/60 rounded-full px-2.5 py-0.5 shrink-0">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                     {activeCampaignsCount} Active
                   </span>
                 </div>
@@ -1036,7 +1037,8 @@ function PosterDashboardContent() {
                     </div>
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Paid to Testers</span>
                   </div>
-                  <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-full px-2.5 py-0.5 shrink-0">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                     {releasedCampaignsCount} Completed
                   </span>
                 </div>
@@ -1065,7 +1067,8 @@ function PosterDashboardContent() {
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Budget &amp; Activity Insights</span>
-                  <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-full px-2.5 py-0.5">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                     Insights
                   </span>
                 </div>
@@ -1099,8 +1102,8 @@ function PosterDashboardContent() {
                   
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                     <span className="text-xs text-slate-500 font-medium">Review Status</span>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
-                      <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100/90 text-slate-700 border border-slate-200/80 shadow-2xs font-mono">
+                      <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span>
                         {listings.length === 0 
                           ? 'No campaigns' 
@@ -1119,7 +1122,8 @@ function PosterDashboardContent() {
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Product Feature Discovery</span>
-                  <span className="inline-flex items-center text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200/60 rounded-full px-2.5 py-0.5">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
                     New Feature
                   </span>
                 </div>

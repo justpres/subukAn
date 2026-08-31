@@ -354,7 +354,8 @@ export default function ListingDetailsPage({ params }: PageProps) {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">{listing.title}</h1>
-                <span className="text-xs font-bold px-2.5 py-1 uppercase rounded-full bg-blue-50 text-blue-800 border border-blue-100">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                   {listing.status}
                 </span>
               </div>
@@ -495,7 +496,7 @@ export default function ListingDetailsPage({ params }: PageProps) {
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">Granular performance metrics breakdown per task question.</p>
                 </div>
-                <span className="text-xs font-semibold px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full">
+                <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 bg-slate-100/90 text-slate-700 rounded-md border border-slate-200/80 font-mono shadow-2xs">
                   {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
                 </span>
               </div>
@@ -598,15 +599,14 @@ export default function ListingDetailsPage({ params }: PageProps) {
                             {sub.submitted_at ? formatDate(sub.submitted_at) : 'In Progress'}
                           </td>
                           <td className="p-4">
-                            <span
-                              className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono uppercase">
+                              <span className={`w-1.5 h-1.5 rounded-full ${
                                 sub.status === 'approved'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                  ? 'bg-emerald-500'
                                   : sub.status === 'rejected'
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-100'
-                                  : 'bg-yellow-50 text-yellow-800 border border-yellow-100'
-                              }`}
-                            >
+                                  ? 'bg-rose-500'
+                                  : 'bg-amber-500'
+                              } shrink-0`} />
                               {sub.status}
                             </span>
                           </td>
@@ -648,7 +648,8 @@ export default function ListingDetailsPage({ params }: PageProps) {
                         <h3 className="font-extrabold text-lg text-gray-900">{v.title}</h3>
                         <span className="text-[10px] text-gray-400 font-mono truncate block max-w-xs">{v.url}</span>
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-100">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100/90 text-slate-700 text-xs font-semibold border border-slate-200/80 shadow-2xs font-mono">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
                         Weight: {v.weight}%
                       </span>
                     </div>

@@ -650,16 +650,7 @@ function TesterDashboardContent() {
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Active Test Session
               </span>
-              {hasActiveTask ? (
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                </span>
-              ) : (
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-              )}
+              <span className={`w-2 h-2 rounded-full ${hasActiveTask ? 'bg-amber-500' : 'bg-emerald-500'} shrink-0`} />
             </div>
             {hasActiveTask ? (
               <div className="mt-2.5 space-y-1">
@@ -709,8 +700,9 @@ function TesterDashboardContent() {
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Total Earnings
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <CheckCircle className="w-3 h-3 text-emerald-600" /> Verified
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                Verified
               </span>
             </div>
             <div className="mt-2.5">
@@ -861,22 +853,14 @@ function TesterDashboardContent() {
                     }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      {/* Glowing Dot representing vacancy/claim status */}
-                      <span className="relative flex h-2 w-2 shrink-0">
-                        {isFull ? (
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-300"></span>
-                        ) : job.user_submission_status ? (
-                          <>
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                          </>
-                        )}
-                      </span>
+                      {/* Clean Static Dot representing vacancy/claim status */}
+                      <span className={`w-2 h-2 rounded-full ${
+                        isFull 
+                          ? 'bg-slate-300' 
+                          : job.user_submission_status 
+                          ? 'bg-indigo-500' 
+                          : 'bg-emerald-500'
+                      } shrink-0`} />
 
                       {/* Icon Circle */}
                       <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${
@@ -1014,33 +998,16 @@ function TesterDashboardContent() {
                   <div key={sub.id} className="px-4 sm:px-5 py-3.5 space-y-3 hover:bg-slate-50/60 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        {/* Glowing Status Dot */}
-                        <span className="relative flex h-2 w-2 shrink-0">
-                          {sub.status === 'approved' && (
-                            <>
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </>
-                          )}
-                          {sub.status === 'pending_review' && (
-                            <>
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                            </>
-                          )}
-                          {sub.status === 'disputed' && (
-                            <>
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                            </>
-                          )}
-                          {(sub.status === 'rejected' || sub.status === 'expired') && (
-                            <>
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                            </>
-                          )}
-                        </span>
+                        {/* Clean Status Dot */}
+                        <span className={`w-2 h-2 rounded-full ${
+                          sub.status === 'approved' 
+                            ? 'bg-emerald-500' 
+                            : sub.status === 'pending_review' 
+                            ? 'bg-amber-500' 
+                            : sub.status === 'disputed' 
+                            ? 'bg-orange-500' 
+                            : 'bg-rose-500'
+                        } shrink-0`} />
 
                         <div className="space-y-0.5 min-w-0 flex-1">
                           <h3 className="font-bold text-slate-900 text-sm truncate">
@@ -1049,12 +1016,16 @@ function TesterDashboardContent() {
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
                             <span>Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}</span>
                             <span className="text-slate-300">•</span>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase border ${
-                              sub.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                              sub.status === 'pending_review' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                              sub.status === 'disputed' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                              'bg-rose-50 text-rose-700 border-rose-100'
-                            }`}>
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono">
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                sub.status === 'approved' 
+                                  ? 'bg-emerald-500' 
+                                  : sub.status === 'pending_review' 
+                                  ? 'bg-amber-500' 
+                                  : sub.status === 'disputed' 
+                                  ? 'bg-orange-500' 
+                                  : 'bg-rose-500'
+                              } shrink-0`} />
                               {sub.status === 'pending_review' ? 'Under Review' : sub.status}
                             </span>
                           </div>
@@ -1201,8 +1172,8 @@ function TesterDashboardContent() {
                         <td className="p-4 text-slate-700 font-mono tabular-nums">{maskGcashNumber(p.gcash_number)}</td>
                         <td className="p-4 font-extrabold text-emerald-700 font-mono tabular-nums">+₱{p.amount.toFixed(2)}</td>
                         <td className="p-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100/90 text-slate-700 border border-slate-200/80 font-bold uppercase text-[10px] shadow-2xs font-mono">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                             {p.status}
                           </span>
                         </td>
