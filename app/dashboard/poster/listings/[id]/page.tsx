@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft,
-  Users,
+  Target,
   Clock,
   CheckCircle,
   FileText,
@@ -392,7 +392,7 @@ export default function ListingDetailsPage({ params }: PageProps) {
               activeTab === 'submissions' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
           >
-            <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> Testers & Payouts</span>
+            <span className="flex items-center gap-1.5"><Target className="w-4 h-4" /> Testers &amp; Payouts</span>
           </button>
           
           {listing.variants && listing.variants.length > 0 && (

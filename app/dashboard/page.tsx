@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ShieldCheck, UserCheck, Briefcase, Award, Loader2, AlertCircle } from 'lucide-react'
+import { ShieldCheck, UserCheck, Target, Award, Loader2, AlertCircle } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 
@@ -148,7 +148,7 @@ function DashboardGateContent() {
           className="flex flex-col h-full p-8 bg-white border border-gray-200 rounded-[12px] hover:border-blue-500 hover:shadow-md transition-all duration-200 group text-left disabled:opacity-50 cursor-pointer"
         >
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-[8px] flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-200">
-            {updating === 'poster' ? <Loader2 className="w-6 h-6 animate-spin" /> : <Briefcase className="w-6 h-6" />}
+            {updating === 'poster' ? <Loader2 className="w-6 h-6 animate-spin" /> : <Target className="w-6 h-6" />}
           </div>
           
           <h2 className="text-2xl font-bold mb-3 text-[#1a1a1a] group-hover:text-blue-600 transition-colors">

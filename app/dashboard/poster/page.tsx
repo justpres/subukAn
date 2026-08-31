@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { 
   Plus, 
   Wallet, 
-  Users, 
+  Target, 
   AlertCircle, 
   FileText, 
   Check, 
@@ -442,10 +442,7 @@ function PosterDashboardContent() {
                     </Link>
                   </td>
                   <td className="py-3.5 px-4 text-left text-slate-600 font-mono text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{listing.slots_filled} / {listing.slots_count}</span>
-                    </div>
+                    <span>{listing.slots_filled} / {listing.slots_count}</span>
                   </td>
                   <td className="py-3.5 px-4 text-right font-semibold text-slate-900 font-mono text-xs">₱{listing.rate_per_tester}</td>
                   <td className="py-3.5 px-4 text-right font-bold text-slate-900 font-mono text-xs">₱{listing.total_budget.toLocaleString()}</td>
@@ -990,7 +987,7 @@ function PosterDashboardContent() {
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                      <Users className="w-4 h-4" />
+                      <Target className="w-4 h-4" />
                     </div>
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Campaigns &amp; Testers</span>
                   </div>
@@ -1053,8 +1050,8 @@ function PosterDashboardContent() {
 
               <div className="pt-3.5 border-t border-slate-100 mt-2 flex items-center justify-between text-[11px]">
                 <span className="text-slate-500 font-medium">Sent directly to tester GCash</span>
-                <span className="font-bold text-emerald-600 flex items-center gap-1 font-mono">
-                  <Check className="w-3.5 h-3.5" /> Verified
+                <span className="font-bold text-emerald-600 font-mono">
+                  Verified
                 </span>
               </div>
             </div>
@@ -1103,7 +1100,6 @@ function PosterDashboardContent() {
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                     <span className="text-xs text-slate-500 font-medium">Review Status</span>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100/90 text-slate-700 border border-slate-200/80 shadow-2xs font-mono">
-                      <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span>
                         {listings.length === 0 
                           ? 'No campaigns' 
