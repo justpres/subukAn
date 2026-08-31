@@ -100,47 +100,61 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-[16px] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div 
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profile-modal-title"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+      <div className="bg-white rounded-[16px] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gray-50">
           <div>
-            <h3 className="font-extrabold text-xl text-gray-900 flex items-center gap-2">
-              <User className="w-5 h-5 text-purple-600" /> Tester Profile Settings
+            <h3 id="profile-modal-title" className="font-extrabold text-xl text-gray-900 flex items-center gap-2">
+              <User className="w-5 h-5 text-purple-600" aria-hidden="true" /> Tester Profile Settings
             </h3>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 mt-1">
               Configure demographic details and notification preferences.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200/60"
+            aria-label="Close profile settings modal"
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 bg-white">
+        <div className="flex border-b border-gray-200 bg-white" role="tablist" aria-label="Profile Sections">
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'demographics'}
+            aria-controls="demographics-panel"
+            id="demographics-tab"
             onClick={() => setActiveTab('demographics')}
-            className={`flex-1 py-3 text-xs font-bold text-center transition-all border-b-2 ${
+            className={`flex-1 py-3 text-xs font-bold text-center transition-all border-b-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 ${
               activeTab === 'demographics'
                 ? 'border-purple-600 text-purple-700 bg-purple-50/40'
-                : 'border-transparent text-gray-500 hover:text-gray-900'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             Demographics & Devices
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'notifications'}
+            aria-controls="notifications-panel"
+            id="notifications-tab"
             onClick={() => setActiveTab('notifications')}
-            className={`flex-1 py-3 text-xs font-bold text-center transition-all border-b-2 ${
+            className={`flex-1 py-3 text-xs font-bold text-center transition-all border-b-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 ${
               activeTab === 'notifications'
                 ? 'border-purple-600 text-purple-700 bg-purple-50/40'
-                : 'border-transparent text-gray-500 hover:text-gray-900'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             Notification Settings
@@ -150,24 +164,25 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
           {errorMsg && (
-            <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px]">
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <div role="alert" className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-[8px]">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {activeTab === 'demographics' && (
-            <div className="space-y-4">
+            <div id="demographics-panel" role="tabpanel" aria-labelledby="demographics-tab" className="space-y-4">
               {/* Age Range & Gender */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-gray-400" /> Age Group
+                  <label htmlFor="profile-age-group" className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /> Age Group
                   </label>
                   <select
+                    id="profile-age-group"
                     value={ageGroup}
                     onChange={e => setAgeGroup(e.target.value)}
-                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600"
+                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600 focus-visible:ring-2 focus-visible:ring-purple-600"
                   >
                     <option value="">Not Specified</option>
                     <option value="18-24">18 - 24 years old</option>
@@ -178,13 +193,14 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-                    <Shield className="w-3.5 h-3.5 text-gray-400" /> Gender
+                  <label htmlFor="profile-gender" className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <Shield className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /> Gender
                   </label>
                   <select
+                    id="profile-gender"
                     value={gender}
                     onChange={e => setGender(e.target.value)}
-                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600"
+                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600 focus-visible:ring-2 focus-visible:ring-purple-600"
                   >
                     <option value="">Not Specified</option>
                     <option value="male">Male</option>
@@ -198,13 +214,14 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
               {/* Location & Employment */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-gray-400" /> Location / Region
+                  <label htmlFor="profile-location" className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /> Location / Region
                   </label>
                   <select
+                    id="profile-location"
                     value={location}
                     onChange={e => setLocation(e.target.value)}
-                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600"
+                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600 focus-visible:ring-2 focus-visible:ring-purple-600"
                   >
                     <option value="Metro Manila">Metro Manila (NCR)</option>
                     <option value="Luzon">Luzon (Provincial)</option>
@@ -215,13 +232,14 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-                    <Briefcase className="w-3.5 h-3.5 text-gray-400" /> Employment Status
+                  <label htmlFor="profile-employment" className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <Briefcase className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /> Employment Status
                   </label>
                   <select
+                    id="profile-employment"
                     value={employmentStatus}
                     onChange={e => setEmploymentStatus(e.target.value)}
-                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600"
+                    className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600 focus-visible:ring-2 focus-visible:ring-purple-600"
                   >
                     <option value="">Not Specified</option>
                     <option value="employed">Employed (Full/Part-Time)</option>
@@ -234,13 +252,14 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
 
               {/* Tech Literacy */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-                  <Laptop className="w-3.5 h-3.5 text-gray-400" /> Tech Literacy Level
+                <label htmlFor="profile-tech-literacy" className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                  <Laptop className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /> Tech Literacy Level
                 </label>
                 <select
+                  id="profile-tech-literacy"
                   value={techLiteracy}
                   onChange={e => setTechLiteracy(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600"
+                  className="w-full p-2.5 border border-gray-200 rounded-[8px] bg-white text-xs focus:outline-none focus:border-purple-600 focus-visible:ring-2 focus-visible:ring-purple-600"
                 >
                   <option value="">Not Specified</option>
                   <option value="non_technical">Non-Technical (Casual Smartphone User)</option>
@@ -377,8 +396,8 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
           )}
 
           {saveSuccess && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-[8px] text-xs text-emerald-800 font-semibold flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-600" />
+            <div role="status" aria-live="polite" className="p-3 bg-emerald-50 border border-emerald-200 rounded-[8px] text-xs text-emerald-800 font-semibold flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600" aria-hidden="true" />
               <span>Profile settings saved successfully!</span>
             </div>
           )}
@@ -388,14 +407,14 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-xs font-semibold"
+              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-[8px] text-xs font-extrabold shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+              className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-[8px] text-xs font-extrabold shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
             >
               {saving ? 'Saving...' : 'Save Profile & Settings'}
             </button>

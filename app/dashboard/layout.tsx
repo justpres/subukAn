@@ -66,6 +66,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-canvas relative">
+      {/* Skip to Main Content Link (WCAG 2.4.1) */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#2955E3] focus:text-white focus:font-bold focus:rounded-lg focus:shadow-lg focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/15 blur-[120px] pointer-events-none z-0" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/10 blur-[120px] pointer-events-none z-0" />
       
@@ -87,10 +95,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 z-30 relative shrink-0">
             <div className="flex items-center gap-3">
               <button 
+                type="button"
                 onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 transition-colors"
+                aria-label="Open navigation sidebar"
+                aria-expanded={isSidebarOpen}
+                className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] rounded-md transition-colors"
               >
-                <Menu className="h-6 w-6" />
+                <Menu className="h-6 w-6" aria-hidden="true" />
               </button>
               <DashboardBreadcrumbs />
             </div>
@@ -101,7 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </header>
         </ErrorBoundary>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-h-0">
+        <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-h-0 focus:outline-none">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

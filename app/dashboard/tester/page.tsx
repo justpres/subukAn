@@ -1303,11 +1303,16 @@ function TesterDashboardContent() {
 
       {/* Payout Modal */}
       {showPayoutModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div 
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tester-gcash-payout-title"
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-fadeIn">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/60">
-              <h3 className="font-extrabold text-lg flex items-center gap-2 text-slate-900">
-                <Wallet className="w-5 h-5 text-[#2955E3]" /> GCash Payout
+              <h3 id="tester-gcash-payout-title" className="font-extrabold text-lg flex items-center gap-2 text-slate-900">
+                <Wallet className="w-5 h-5 text-[#2955E3]" aria-hidden="true" /> GCash Payout
               </h3>
               <button 
                 type="button"
@@ -1317,7 +1322,8 @@ function TesterDashboardContent() {
                   setPayoutError(null)
                   setPayoutGcashNumber('')
                 }}
-                className="text-slate-400 hover:text-slate-600 text-xl font-medium p-1 rounded-md"
+                aria-label="Close GCash payout modal"
+                className="text-slate-400 hover:text-slate-600 text-2xl font-medium p-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
               >
                 &times;
               </button>
@@ -1325,12 +1331,12 @@ function TesterDashboardContent() {
 
             <div className="p-6 space-y-4">
               {payoutSuccess ? (
-                <div className="text-center space-y-3 py-4">
+                <div role="status" aria-live="polite" className="text-center space-y-3 py-4">
                   <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-                    <CheckCircle className="w-6 h-6" />
+                    <CheckCircle className="w-6 h-6" aria-hidden="true" />
                   </div>
                   <h4 className="font-bold text-slate-900 text-base">GCash Account Verified!</h4>
-                  <p className="text-xs text-slate-500">Your GCash mobile number has been saved. Payouts for approved submissions are automatically credited to this number.</p>
+                  <p className="text-xs text-slate-600">Your GCash mobile number has been saved. Payouts for approved submissions are automatically credited to this number.</p>
                 </div>
               ) : (
                 <form onSubmit={handleRequestPayout} className="space-y-4">
@@ -1340,21 +1346,22 @@ function TesterDashboardContent() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Update GCash Payout Mobile Number</label>
+                    <label htmlFor="tester-gcash-input" className="block text-xs font-bold text-slate-700 mb-1.5">Update GCash Payout Mobile Number</label>
                     <input
+                      id="tester-gcash-input"
                       type="text"
                       required
                       value={payoutGcashNumber}
                       onChange={e => setPayoutGcashNumber(e.target.value)}
                       placeholder="09XXXXXXXXX"
-                      className="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-[#2955E3] focus:ring-1 focus:ring-[#2955E3]"
+                      className="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-[#2955E3] focus:ring-1 focus:ring-[#2955E3] focus-visible:ring-2 focus-visible:ring-[#2955E3]"
                     />
-                    <p className="text-[11px] text-slate-400 mt-1">SubukAn automatically disburses ₱ per task directly to this GCash number upon approval.</p>
+                    <p className="text-[11px] text-slate-500 mt-1">SubukAn automatically disburses ₱ per task directly to this GCash number upon approval.</p>
                   </div>
 
                   {payoutError && (
-                    <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-lg flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                    <div role="alert" className="p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-lg flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" aria-hidden="true" />
                       <span>{payoutError}</span>
                     </div>
                   )}
@@ -1367,16 +1374,16 @@ function TesterDashboardContent() {
                         setPayoutError(null)
                         setPayoutGcashNumber('')
                       }}
-                      className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 text-xs font-semibold transition-colors"
+                      className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={payoutLoading}
-                      className="px-4 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-2 transition-colors"
+                      className="px-5 py-2 bg-[#2955E3] hover:bg-[#1E40AF] text-white rounded-lg text-xs font-extrabold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
                     >
-                      {payoutLoading ? 'Saving...' : 'Save GCash Number'}
+                      {payoutLoading ? 'Saving...' : 'Save GCash Account'}
                     </button>
                   </div>
                 </form>

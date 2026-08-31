@@ -43,13 +43,15 @@ export function DashboardBreadcrumbs() {
 
         return (
           <React.Fragment key={href}>
-            {index > 0 && <ChevronRight className="h-4 w-4 text-steel" />}
+            {index > 0 && <ChevronRight className="h-4 w-4 text-steel" aria-hidden="true" />}
             {isClickable ? (
-              <Link href={href} className="hover:text-primary-brand transition-colors">
+              <Link href={href} className="hover:text-primary-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] rounded-xs transition-colors">
                 {label}
               </Link>
             ) : (
-              <span className={isLast ? "font-medium text-ink" : "text-slate"}>{label}</span>
+              <span aria-current={isLast ? 'page' : undefined} className={isLast ? "font-semibold text-ink" : "text-slate-600"}>
+                {label}
+              </span>
             )}
           </React.Fragment>
         )

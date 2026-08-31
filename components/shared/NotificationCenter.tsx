@@ -319,7 +319,11 @@ export function NotificationCenter() {
           />
 
           {/* Popover Container */}
-          <div className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] sm:w-96 max-h-[480px] bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden animate-fadeIn">
+          <div 
+            role="region"
+            aria-label="Notifications Panel"
+            className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] sm:w-96 max-h-[480px] bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden animate-fadeIn"
+          >
             {/* Header: Clean layout with title, new badge, mark all read, and single X close */}
             <div className="p-3.5 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
@@ -336,18 +340,19 @@ export function NotificationCenter() {
                   <button
                     type="button"
                     onClick={handleMarkAllAsRead}
-                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
+                    aria-label="Mark all notifications as read"
+                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded-xs"
                   >
-                    <Check className="w-3.5 h-3.5" /> Mark all read
+                    <Check className="w-3.5 h-3.5" aria-hidden="true" /> Mark all read
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  aria-label="Close notifications"
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/50 transition-colors ml-0.5"
+                  aria-label="Close notifications panel"
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/50 transition-colors ml-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             </div>

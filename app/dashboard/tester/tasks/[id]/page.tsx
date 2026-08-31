@@ -1135,39 +1135,42 @@ export default function TaskWorkspacePage() {
                           {/* Inner task response items */}
                           <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                             <div>
-                              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2 select-none">
+                              <label htmlFor={`response-text-${task.id}`} className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 select-none">
                                 Your Response Details (minimum 10 characters)
                               </label>
                               <textarea
+                                id={`response-text-${task.id}`}
                                 value={response.answer_text}
                                 onChange={(e) => handleAnswerTextChange(task.id, e.target.value)}
                                 placeholder="Explain your feedback, errors found, or layout issues..."
                                 rows={3}
-                                className="w-full p-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-600 text-sm focus:ring-1 focus:ring-blue-600"
+                                className="w-full p-3 border border-gray-200 rounded-[8px] focus:outline-none focus:border-blue-600 text-sm focus:ring-1 focus:ring-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600"
                               />
-                              <div className="flex justify-between text-[11px] text-gray-400 mt-1 select-none">
+                              <div className="flex justify-between text-[11px] text-gray-500 mt-1 select-none">
                                 <span>Character count: {response.answer_text.length} / 10 required</span>
                                 {response.answer_text.length > 0 && response.answer_text.length < 10 && (
-                                  <span className="text-rose-500 font-semibold">Under 10 characters</span>
+                                  <span className="text-rose-600 font-semibold">Under 10 characters</span>
                                 )}
                               </div>
                             </div>
 
                             {/* 1-5 Difficulty score */}
                             <div>
-                              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2 select-none">
+                              <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 select-none">
                                 Task Difficulty Rating
-                              </label>
-                              <div className="flex gap-2">
+                              </span>
+                              <div className="flex gap-2" role="group" aria-label="Task Difficulty Rating (1 to 5)">
                                 {[1, 2, 3, 4, 5].map((val) => (
                                   <button
                                     key={val}
                                     type="button"
                                     onClick={() => handleDifficultyRatingChange(task.id, val)}
-                                    className={`w-9 h-9 rounded-[8px] border font-bold text-xs flex items-center justify-center transition-all ${
+                                    aria-label={`Rate difficulty ${val} of 5`}
+                                    aria-pressed={response.difficulty_rating === val}
+                                    className={`w-9 h-9 rounded-[8px] border font-bold text-xs flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
                                       response.difficulty_rating === val
                                         ? 'bg-blue-600 border-blue-600 text-white'
-                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                                     }`}
                                   >
                                     {val}
