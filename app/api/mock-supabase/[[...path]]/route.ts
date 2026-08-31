@@ -330,9 +330,9 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
 
     const orderParam = url.searchParams.get('order');
     if (orderParam && orderParam.includes('created_at') && orderParam.includes('desc')) {
-      result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
     } else if (orderParam && orderParam.includes('created_at')) {
-      result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      result.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
     }
 
     return NextResponse.json(getResponsePayload(result, prefersObject));

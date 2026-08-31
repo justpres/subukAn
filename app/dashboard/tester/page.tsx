@@ -852,62 +852,36 @@ function TesterDashboardContent() {
                       isFull ? 'opacity-60' : ''
                     }`}
                   >
-                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      {/* Clean Static Dot representing vacancy/claim status */}
-                      <span className={`w-2 h-2 rounded-full ${
-                        isFull 
-                          ? 'bg-slate-300' 
-                          : job.user_submission_status 
-                          ? 'bg-indigo-500' 
-                          : 'bg-emerald-500'
-                      } shrink-0`} />
-
-                      {/* Icon Circle */}
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${
-                        job.is_quick_impression 
-                          ? 'bg-amber-50 text-amber-600 border-amber-100/60'
-                          : job.requires_recording
-                            ? 'bg-purple-50 text-purple-600 border-purple-100/60'
-                            : 'bg-blue-50 text-blue-600 border-blue-100/60'
-                      }`}>
-                        {job.is_quick_impression ? (
-                          <Zap className="w-4 h-4" />
-                        ) : job.requires_recording ? (
-                          <Video className="w-4 h-4" />
-                        ) : job.site_url?.includes('app') ? (
-                          <Smartphone className="w-4 h-4" />
-                        ) : (
-                          <Globe className="w-4 h-4" />
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-slate-900 text-sm truncate">
+                          {job.title}
+                        </h3>
+                        {job.is_quick_impression && (
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
+                            5s Test
+                          </span>
+                        )}
+                        {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
+                            Match
+                          </span>
                         )}
                       </div>
-                      
-                      <div className="space-y-0.5 min-w-0 flex-1">
-                        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 flex-wrap">
-                          <span className="truncate">{job.title}</span>
-                          {job.is_quick_impression && (
-                            <span className="text-[9px] font-extrabold tracking-wider uppercase bg-amber-50 text-amber-800 border border-amber-200/50 px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
-                              <Zap className="w-2.5 h-2.5 text-amber-500" /> 5s
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
+                        <span className="shrink-0 font-semibold font-mono text-slate-700">
+                          {job.slots_filled >= job.slots_count ? 'Slots Full' : `${job.slots_count - job.slots_filled} slots left`}
+                        </span>
+                        <span className="text-slate-300 select-none">•</span>
+                        <span className="line-clamp-1 text-slate-400 font-normal">{job.description}</span>
+                        {(job.requires_recording || job.requires_image) && (
+                          <>
+                            <span className="text-slate-300 select-none">•</span>
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider shrink-0 font-mono">
+                              {[job.requires_recording && 'Recording', job.requires_image && 'Screenshot'].filter(Boolean).join(' + ')}
                             </span>
-                          )}
-                          {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
-                            <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100/50 px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
-                              <Target className="w-2.5 h-2.5 text-purple-500" /> Match
-                            </span>
-                          )}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
-                          <span className="shrink-0 font-semibold">{job.slots_filled >= job.slots_count ? 'Slots Full' : `${job.slots_count - job.slots_filled} slots left`}</span>
-                          <span className="text-slate-300 select-none">•</span>
-                          <span className="line-clamp-1 text-slate-400 font-normal">{job.description}</span>
-                          {(job.requires_recording || job.requires_image) && (
-                            <>
-                              <span className="text-slate-300 select-none">•</span>
-                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
-                                {[job.requires_recording && 'Recording', job.requires_image && 'Screenshot'].filter(Boolean).join(' + ')}
-                              </span>
-                            </>
-                          )}
-                        </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -997,38 +971,26 @@ function TesterDashboardContent() {
                 return (
                   <div key={sub.id} className="px-4 sm:px-5 py-3.5 space-y-3 hover:bg-slate-50/60 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        {/* Clean Status Dot */}
-                        <span className={`w-2 h-2 rounded-full ${
-                          sub.status === 'approved' 
-                            ? 'bg-emerald-500' 
-                            : sub.status === 'pending_review' 
-                            ? 'bg-amber-500' 
-                            : sub.status === 'disputed' 
-                            ? 'bg-orange-500' 
-                            : 'bg-rose-500'
-                        } shrink-0`} />
-
-                        <div className="space-y-0.5 min-w-0 flex-1">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-bold text-slate-900 text-sm truncate">
                             {sub.listing_title}
                           </h3>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
-                            <span>Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono">
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                sub.status === 'approved' 
-                                  ? 'bg-emerald-500' 
-                                  : sub.status === 'pending_review' 
-                                  ? 'bg-amber-500' 
-                                  : sub.status === 'disputed' 
-                                  ? 'bg-orange-500' 
-                                  : 'bg-rose-500'
-                              } shrink-0`} />
-                              {sub.status === 'pending_review' ? 'Under Review' : sub.status}
-                            </span>
-                          </div>
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono uppercase">
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              sub.status === 'approved' 
+                                ? 'bg-emerald-500' 
+                                : sub.status === 'pending_review' 
+                                ? 'bg-amber-500' 
+                                : sub.status === 'disputed' 
+                                ? 'bg-orange-500' 
+                                : 'bg-rose-500'
+                            } shrink-0`} />
+                            {sub.status === 'pending_review' ? 'Under Review' : sub.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
+                          <span>Submitted on {new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
 
