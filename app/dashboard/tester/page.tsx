@@ -565,7 +565,7 @@ function TesterDashboardContent() {
             Tester Workspace
           </h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-1 font-medium">
-            Welcome back, {profile?.full_name || 'Tester'}. Ready to claim new testing opportunities today?
+            Explore available testing opportunities, track submissions, and manage payouts.
           </p>
         </div>
 
@@ -774,36 +774,6 @@ function TesterDashboardContent() {
       {/* 4. Tab 1: Available Tasks Feed */}
       {activeTab === 'available' && (
         <div className="space-y-6">
-          {/* Welcome Back Continuity Card */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Since your last session:
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                <CheckCircle className="w-3.5 h-3.5 text-blue-600" />
-                <span>Session Continuity</span>
-              </span>
-            </div>
-            <div className="mt-3 text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
-              {"Since your last session: ₱200.00 GCash Payout successfully credited, 1 submission approved by Poster, 0 security flags detected."}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-200/60 mt-4">
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>₱200.00 GCash Payout credited</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>1 submission approved by Poster</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>0 security flags detected</span>
-              </div>
-            </div>
-          </div>
-
           {/* Personalized Financial Insights Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Earning Target Progress Card */}

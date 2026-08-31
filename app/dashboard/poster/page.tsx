@@ -13,13 +13,11 @@ import {
   Check, 
   Copy, 
   Download, 
-  ShieldCheck, 
   CheckCircle2, 
   Search, 
   Eye, 
   EyeOff, 
   ExternalLink,
-  Layers,
   Clock,
   TrendingDown
 } from 'lucide-react'
@@ -457,7 +455,7 @@ function PosterDashboardContent() {
     ? 'Manage sandbox credentials, PayMongo keys, and GCash payout configuration.' 
     : activeTab === 'listings' 
       ? 'Manage and filter your full list of testing campaigns.' 
-      : `Welcome back, ${profile?.full_name || 'Poster'}. Ready to review your testing pipeline today?`
+      : 'Overview of active testing campaigns, submissions, and escrow funds.'
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -891,36 +889,6 @@ function PosterDashboardContent() {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-8">
-          {/* Welcome Back Operational Summary Card */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Since your last session:
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>Operational Status</span>
-              </span>
-            </div>
-            <div className="mt-3 text-xs sm:text-sm text-slate-700 font-medium leading-relaxed font-mono">
-              {"Since your last session: 2 active campaigns updated, 3 submissions awaiting review, ₱0 unallocated escrow funds idle."}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-200/60 mt-4">
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <Layers className="w-4 h-4 text-blue-600 shrink-0" />
-                <span>2 active campaigns updated</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <Clock className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>3 submissions awaiting review</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <Wallet className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>₱0 unallocated escrow funds idle</span>
-              </div>
-            </div>
-          </div>
-
           {/* 3-Card Metric Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
             {/* Card 1: Escrow Overview Card */}
@@ -939,12 +907,9 @@ function PosterDashboardContent() {
               >
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
-                      ESCROW PROTECTION VAULT
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
+                      Escrow Balance
                     </span>
-                    <div className="text-[10px] text-emerald-400 font-semibold tracking-wider uppercase flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Protected in Escrow
-                    </div>
                   </div>
                   {/* Gold Chip */}
                   <div 
