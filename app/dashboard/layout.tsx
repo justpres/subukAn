@@ -65,7 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas relative">
+    <div className="fixed inset-0 flex h-full w-full overflow-hidden bg-canvas">
       {/* Skip to Main Content Link (WCAG 2.4.1) */}
       <a 
         href="#main-content" 

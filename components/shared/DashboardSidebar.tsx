@@ -98,6 +98,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
               <Link 
                 key={link.name} 
                 href={link.href}
+                scroll={false}
                 onClick={() => onToggle(false)}
                 aria-current={isActive ? 'page' : undefined}
                 className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] ${
@@ -116,6 +117,7 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
         <div className="border-t border-slate-800 p-4 space-y-2">
           <Link 
             href="/dashboard?select=true"
+            scroll={false}
             onClick={() => onToggle(false)}
             className="flex items-center space-x-3 rounded-lg px-4 py-3 text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
           >

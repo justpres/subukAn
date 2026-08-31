@@ -1138,6 +1138,7 @@ function PosterDashboardContent() {
               <div className="pt-3 border-t border-slate-100 flex justify-end">
                 <Link
                   href="/dashboard/poster?tab=settings"
+                  scroll={false}
                   className="text-xs font-bold text-[#2955E3] hover:text-[#1D4ED8] inline-flex items-center gap-1 transition-colors"
                 >
                   <span>Explore Advanced Tools</span>
@@ -1154,6 +1155,7 @@ function PosterDashboardContent() {
               {listings.length > 3 && (
                 <Link 
                   href="/dashboard/poster?tab=listings" 
+                  scroll={false}
                   className="text-sm font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors"
                 >
                   View all {listings.length} campaigns &rarr;
@@ -1165,6 +1167,7 @@ function PosterDashboardContent() {
               <div className="text-center pt-2">
                 <Link 
                   href="/dashboard/poster?tab=listings" 
+                  scroll={false}
                   className="text-sm font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors"
                 >
                   View all {listings.length} campaigns &rarr;

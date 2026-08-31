@@ -131,7 +131,7 @@ function TesterDashboardContent() {
   })
 
   const switchTab = (tab: 'available' | 'submissions' | 'earnings') => {
-    router.push(`/dashboard/tester?tab=${tab}`)
+    router.push(`/dashboard/tester?tab=${tab}`, { scroll: false })
   }
 
   const fetchProfileAndListings = useCallback(async () => {
