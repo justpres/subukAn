@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
+import { createPortal } from 'react-dom'
 import Tilt from 'react-parallax-tilt'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -106,6 +107,11 @@ function TesterDashboardContent() {
   const [loading, setLoading] = useState(true)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [loadingError, setLoadingError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const totalEarnedValue = withdrawableBalance + payouts
     .filter(p => p.status === 'completed')
@@ -1167,12 +1173,12 @@ function TesterDashboardContent() {
       />
 
       {/* Payout Modal */}
-      {showPayoutModal && (
+      {showPayoutModal && mounted && createPortal(
         <div 
           role="dialog"
           aria-modal="true"
           aria-labelledby="tester-gcash-payout-title"
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-all animate-fadeIn"
         >
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-fadeIn">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/60">
@@ -1219,7 +1225,7 @@ function TesterDashboardContent() {
                       value={payoutGcashNumber}
                       onChange={e => setPayoutGcashNumber(e.target.value)}
                       placeholder="09XXXXXXXXX"
-                      className="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-[#2955E3] focus:ring-1 focus:ring-[#2955E3] focus-visible:ring-2 focus-visible:ring-[#2955E3]"
+                      className="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus-border-[#2955E3] focus:ring-1 focus:ring-[#2955E3] focus-visible:ring-2 focus-visible:ring-[#2955E3]"
                     />
                     <p className="text-[11px] text-slate-500 mt-1">Your rewards will be sent automatically to this GCash number once your test is approved.</p>
                   </div>
@@ -1255,7 +1261,8 @@ function TesterDashboardContent() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

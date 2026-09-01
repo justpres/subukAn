@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface AgreementModalProps {
   title: string;
@@ -11,7 +12,12 @@ interface AgreementModalProps {
 
 export function AgreementModal({ title, content, onAccept, onDecline }: AgreementModalProps) {
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleScroll = () => {
     if (contentRef.current) {
@@ -22,12 +28,14 @@ export function AgreementModal({ title, content, onAccept, onDecline }: Agreemen
     }
   }
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <div 
       role="dialog"
       aria-modal="true"
       aria-labelledby="agreement-modal-title"
-      className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn"
+      className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 z-[100] transition-all animate-fadeIn"
     >
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full flex flex-col max-h-[80vh]">
         <div className="p-4 border-b">
@@ -66,6 +74,7 @@ export function AgreementModal({ title, content, onAccept, onDecline }: Agreemen
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

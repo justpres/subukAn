@@ -83,16 +83,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onToggle={setIsSidebarOpen} 
       />
       
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden z-10">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <ErrorBoundary fallback={
-          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 z-30 relative shrink-0">
+          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 relative shrink-0">
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold text-slate-800 font-poppins">subukAn</span>
             </div>
             <div className="text-xs text-slate-400 font-mono">Header suspended</div>
           </header>
         }>
-          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 z-30 relative shrink-0">
+          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 relative shrink-0">
             <div className="flex items-center gap-3">
               <button 
                 type="button"

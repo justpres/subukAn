@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ShieldAlert, X, AlertCircle, CheckCircle2, Scale } from 'lucide-react'
 import { DISPUTE_REASON_LABELS } from '@/lib/utils/workspace-status'
 
@@ -24,8 +25,13 @@ export function DisputeModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  if (!isOpen) return null
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!isOpen || !mounted) return null
 
   const isFormValid = disputeExplanation.trim().length >= 10
 
@@ -54,12 +60,12 @@ export function DisputeModal({
     }
   }
 
-  return (
+  return createPortal(
     <div 
       role="dialog"
       aria-modal="true"
       aria-labelledby="dispute-modal-title"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 transition-all animate-fadeIn"
     >
       <div className="bg-white rounded-[16px] w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         {/* Header */}
@@ -177,6 +183,7 @@ export function DisputeModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -271,7 +271,7 @@ export function NotificationCenter() {
         <>
           {/* Backdrop click-away overlay */}
           <div 
-            className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px] transition-opacity" 
+            className="fixed inset-0 z-40 bg-transparent" 
             onClick={() => setIsOpen(false)} 
           />
 

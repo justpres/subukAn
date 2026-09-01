@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -126,6 +127,11 @@ export default function SubmissionReviewPage({ params }: PageProps) {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState<string>('')
   const [rejectionExplanation, setRejectionExplanation] = useState<string>('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   const [isApproving, setIsApproving] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
@@ -1161,8 +1167,8 @@ export default function SubmissionReviewPage({ params }: PageProps) {
       </div>
 
       {/* Rejection Modal Dialog */}
-      {isRejectModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      {isRejectModalOpen && mounted && createPortal(
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-all animate-fadeIn">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full flex flex-col max-h-[85vh] overflow-hidden">
             {/* Modal Header */}
             <div className="p-5 border-b flex justify-between items-center bg-gray-50">
@@ -1326,12 +1332,13 @@ export default function SubmissionReviewPage({ params }: PageProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Screenshot Lightbox Modal */}
-      {lightboxUrl && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
+      {lightboxUrl && mounted && createPortal(
+        <div className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-4 cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
           <div className="relative max-w-5xl max-h-[90vh] flex flex-col justify-center items-center" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setLightboxUrl(null)}
@@ -1346,7 +1353,8 @@ export default function SubmissionReviewPage({ params }: PageProps) {
               className="max-w-full max-h-[80vh] rounded-lg object-contain shadow-2xl"
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

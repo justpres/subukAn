@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, AlertCircle, Trash2, HelpCircle, AlertTriangle } from 'lucide-react'
 import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
@@ -55,6 +56,13 @@ export default function CreateCampaignModal({
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
   const [listings, setListings] = useState<any[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const totalBudget = formRate * formSlots
 
   useEffect(() => {
     if (isOpen) {
@@ -65,8 +73,47 @@ export default function CreateCampaignModal({
         setFormRate(initialValues.rate_per_tester || 200)
         setFormSlots(initialValues.slots_count || 5)
         setFormReviewWindow(initialValues.review_window_minutes || 30)
+        setTargetAgeGroup(initialValues.target_age_group || '')
+        setTargetGender(initialValues.target_gender || '')
+        setTargetEmploymentStatus(initialValues.target_employment_status || '')
+        setTargetTechLiteracy(initialValues.target_tech_literacy || '')
+        setTargetAccessibilityTags(initialValues.target_accessibility_tags || [])
+        setIsQuickImpression(initialValues.is_quick_impression || false)
+        setImpressionDurationSeconds(initialValues.impression_duration_seconds || 5)
+        if (initialValues.tasks && initialValues.tasks.length > 0) {
+          setFormQuestions(initialValues.tasks.map((t: any) => ({
+            question_text: t.question_text || '',
+            requires_recording: t.requires_recording ?? true,
+            requires_image: t.requires_image ?? false
+          })))
+        }
+      } else {
+        setStep(1)
+        setFormTitle('')
+        setFormDescription('')
+        setFormSiteUrl('')
+        setFormRate(200)
+        setFormSlots(5)
+        setFormReviewWindow(30)
+        setFormQuestions([
+          { question_text: 'Did the checkout screen display the correct GCash prompt?', requires_recording: true, requires_image: false }
+        ])
+        setTargetAgeGroup('')
+        setTargetGender('')
+        setTargetEmploymentStatus('')
+        setTargetTechLiteracy('')
+        setTargetAccessibilityTags([])
+        setIsABTesting(false)
+        setFormVariants([
+          { id: 'A', title: 'Variant A', url: '', weight: 50 },
+          { id: 'B', title: 'Variant B', url: '', weight: 50 }
+        ])
+        setParentListingId('')
+        setIsQuickImpression(false)
+        setImpressionDurationSeconds(5)
       }
-      setStep(1)
+      setErrors({})
+      setSubmitError(null)
       setCheckoutUrl(null)
     }
   }, [isOpen, initialValues])
@@ -177,78 +224,98 @@ export default function CreateCampaignModal({
     }
 
     setIsSubmitting(true)
+    setSubmitError(null)
 
     try {
-      const { data: newListing, error: listingError } = await supabase
+      const payload: any = {
+        title: formTitle,
+        description: formDescription,
+        site_url: formSiteUrl || 'https://example.com',
+        rate_per_tester: formRate,
+        slots_count: formSlots,
+        total_budget: totalBudget,
+        review_window_minutes: formReviewWindow,
+        target_age_group: targetAgeGroup || undefined,
+        target_gender: targetGender || undefined,
+        target_employment_status: targetEmploymentStatus || undefined,
+        target_tech_literacy: targetTechLiteracy || undefined,
+        target_accessibility_tags: targetAccessibilityTags.length > 0 ? targetAccessibilityTags : undefined,
+        is_ab_test: isABTesting,
+        variants: isABTesting ? formVariants : undefined,
+        parent_listing_id: parentListingId || undefined,
+        is_quick_impression: isQuickImpression,
+        impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : undefined,
+        questions: formQuestions,
+      }
+
+      // Schema validation via Zod
+      createListingSchema.parse(payload)
+
+      // Step 1: Insert listing into database with open status
+      const { questions, ...listingPayload } = payload
+      const { data: listingData, error: listingError } = await supabase
         .from('listings')
         .insert({
+          ...listingPayload,
           poster_id: user.id,
-          title: formTitle,
-          description: formDescription,
-          site_url: formSiteUrl || null,
-          rate_per_tester: formRate,
-          slots_count: formSlots,
-          total_budget: formRate * formSlots,
-          review_window_minutes: formReviewWindow,
           status: 'open',
-          target_age_group: targetAgeGroup || null,
-          target_gender: targetGender || null,
-          target_employment_status: targetEmploymentStatus || null,
-          target_tech_literacy: targetTechLiteracy || null,
-          target_accessibility_tags: targetAccessibilityTags,
-          is_quick_impression: isQuickImpression,
-          impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : null,
-          parent_listing_id: parentListingId || null,
-          variants: isABTesting ? formVariants : [],
+          slots_filled: 0,
         })
         .select()
         .single()
 
       if (listingError) throw listingError
-      if (!newListing) throw new Error('Listing creation returned no data.')
 
-      const tasksData = formQuestions.map((q, index) => ({
-        listing_id: newListing.id,
-        order_index: index,
+      // Step 2: Insert verification tasks
+      const tasksPayload = formQuestions.map(q => ({
+        listing_id: listingData.id,
         question_text: q.question_text,
         requires_recording: q.requires_recording,
         requires_image: q.requires_image
       }))
 
-      const { error: tasksError } = await supabase.from('tasks').insert(tasksData)
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .insert(tasksPayload)
+
       if (tasksError) throw tasksError
 
-      // Fetch official PayMongo checkout URL from server route
-      const checkoutRes = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listing_id: newListing.id }),
-      })
-
-      if (checkoutRes.ok) {
+      // Step 3: Server-side Payment Link Generation
+      try {
+        const checkoutRes = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            listing_id: listingData.id,
+          })
+        })
         const checkoutData = await checkoutRes.json()
-        setCheckoutUrl(checkoutData.checkout_url)
-      } else {
-        const mockLinkId = `link_${Math.random().toString(36).substring(2, 10)}`
-        const mockUrl = `https://checkout.paymongo.com/mock/${mockLinkId}?ref=${newListing.id}&amt=${newListing.total_budget * 100}`
-        setCheckoutUrl(mockUrl)
+        if (checkoutRes.ok && checkoutData.checkout_url) {
+          setCheckoutUrl(checkoutData.checkout_url)
+        } else {
+          setCheckoutUrl(`https://checkout.paymongo.com/mock/cs_${Date.now()}`)
+        }
+      } catch (e) {
+        setCheckoutUrl(`https://checkout.paymongo.com/mock/cs_${Date.now()}`)
       }
+
       onSubmitSuccess()
     } catch (err: any) {
-      setSubmitError(sanitizeDatabaseError(err, 'An error occurred during submission.'))
+      console.error('Error submitting form:', err)
+      setSubmitError(sanitizeDatabaseError(err, 'Failed to create campaign. Please verify your form data.'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
-  return (
+  return createPortal(
     <div 
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-campaign-title"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 transition-all animate-fadeIn"
     >
       <div className="bg-white rounded-[16px] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
@@ -282,7 +349,10 @@ export default function CreateCampaignModal({
             <div className="flex justify-center gap-3">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  onSubmitSuccess()
+                  onClose()
+                }}
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-sm font-semibold shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
               >
                 Done
@@ -687,6 +757,7 @@ export default function CreateCampaignModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
