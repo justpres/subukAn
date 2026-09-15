@@ -16,25 +16,6 @@ const verifyOtpSchema = z.object({
   code: z.string().length(4, { message: 'Verification code must be exactly 4 digits.' }),
 });
 
-type OtpEntry = {
-  code: string;
-  phoneNumber: string;
-  expiresAt: number;
-  lastSentAt: number;
-  attempts: number;
-};
-
-// Global in-memory OTP cache to survive hot reloads during development
-const globalForOtp = globalThis as unknown as {
-  otpCache?: Map<string, OtpEntry>;
-};
-
-const otpCache = globalForOtp.otpCache ?? new Map<string, OtpEntry>();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForOtp.otpCache = otpCache;
-}
-
 // Normalizes various PH phone formats to E.164 (e.g. +639171234567)
 function normalizePhoneNumber(phone: string): string {
   if (phone.startsWith('09')) {
@@ -46,11 +27,20 @@ function normalizePhoneNumber(phone: string): string {
   return phone;
 }
 
+// Helper to hash OTP code before saving
+function hashOtpCode(code: string): string {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
 // Helper to authenticate user session (supports cookies and Bearer headers)
 async function authenticateUser(req: NextRequest) {
-  const supabase = createRouteHandlerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) return user;
+  try {
+    const supabase = createRouteHandlerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) return user;
+  } catch {
+    // Route handler client fallback
+  }
 
   // Fallback to checking Authorization header
   const authHeader = req.headers.get('Authorization');
@@ -75,7 +65,7 @@ async function authenticateUser(req: NextRequest) {
   return null;
 }
 
-// Initialize Supabase Admin client to bypass RLS policies and update auth.users
+// Initialize Supabase Admin client to bypass RLS policies and manage verification state
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -94,7 +84,8 @@ function getSupabaseAdmin() {
 
 /**
  * POST /api/auth/verify-phone
- * Initiates the phone verification flow by generating and sending a 4-digit OTP.
+ * Initiates the phone verification flow by generating and dispatching a 4-digit OTP.
+ * Persists hashed verification token in Supabase `phone_verifications` table.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -122,32 +113,57 @@ export async function POST(req: NextRequest) {
     }
 
     const { phoneNumber } = parseResult.data;
+    const supabaseAdmin = getSupabaseAdmin();
 
-    // 3. Enforce SMS dispatch rate limits (60 seconds)
-    const existingEntry = otpCache.get(user.id);
+    // 3. Enforce SMS dispatch rate limits (60 seconds) via database check
+    const { data: existingVerification } = await supabaseAdmin
+      .from('phone_verifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
     const now = Date.now();
-    if (existingEntry && now - existingEntry.lastSentAt < 60 * 1000) {
-      const waitSeconds = Math.ceil((60 * 1000 - (now - existingEntry.lastSentAt)) / 1000);
+    if (existingVerification?.last_sent_at) {
+      const lastSentTime = new Date(existingVerification.last_sent_at).getTime();
+      if (now - lastSentTime < 60 * 1000) {
+        const waitSeconds = Math.ceil((60 * 1000 - (now - lastSentTime)) / 1000);
+        return NextResponse.json(
+          { error: `Please wait ${waitSeconds} seconds before requesting a new verification code.` },
+          { status: 429 }
+        );
+      }
+    }
+
+    // 4. Generate 4-digit code and SHA-256 hash
+    const otpCode = crypto.randomInt(1000, 10000).toString();
+    const codeHash = hashOtpCode(otpCode);
+    const expiresAt = new Date(now + 5 * 60 * 1000).toISOString(); // 5 minutes validity
+    const lastSentAt = new Date(now).toISOString();
+
+    // 5. Store / Upsert in Supabase `phone_verifications` table
+    const { error: upsertError } = await supabaseAdmin
+      .from('phone_verifications')
+      .upsert(
+        {
+          user_id: user.id,
+          phone_number: phoneNumber,
+          code_hash: codeHash,
+          expires_at: expiresAt,
+          last_sent_at: lastSentAt,
+          attempts: 0,
+        },
+        { onConflict: 'user_id' }
+      );
+
+    if (upsertError) {
+      console.error('Failed to store phone verification in database:', upsertError);
       return NextResponse.json(
-        { error: `Please wait ${waitSeconds} seconds before requesting a new verification code.` },
-        { status: 429 }
+        { error: 'Failed to record verification request. Please try again.' },
+        { status: 500 }
       );
     }
 
-    // 4. Generate 4-digit code
-    const otpCode = crypto.randomInt(1000, 10000).toString();
-    const expiresAt = now + 5 * 60 * 1000; // 5 minutes validity
-
-    // Store in cache
-    otpCache.set(user.id, {
-      code: otpCode,
-      phoneNumber,
-      expiresAt,
-      lastSentAt: now,
-      attempts: 0,
-    });
-
-    // 5. Dispatch SMS (Mock in dev/standard HTTP SMS in prod)
+    // 6. Dispatch SMS (Mock in dev/standard HTTP SMS in prod)
     if (process.env.NODE_ENV === 'development' || !process.env.SMS_API_KEY) {
       console.log(`[SMS MOCK] [User: ${user.id}] OTP Code ${otpCode} sent to ${phoneNumber}`);
     } else {
@@ -187,8 +203,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Verification code sent successfully.',
-      // Return code in development/testing context for convenience
-      ...(process.env.NODE_ENV === 'development' ? { devOtpCode: otpCode } : {}),
+      ...(process.env.NODE_ENV !== 'production' ? { devOtpCode: otpCode } : {}),
     });
 
   } catch (error: any) {
@@ -202,7 +217,8 @@ export async function POST(req: NextRequest) {
 
 /**
  * PUT /api/auth/verify-phone
- * Validates the verification code and updates profiles/auth columns.
+ * Validates the verification code from Supabase `phone_verifications` table
+ * and updates profiles/auth credentials.
  */
 export async function PUT(req: NextRequest) {
   try {
@@ -226,40 +242,56 @@ export async function PUT(req: NextRequest) {
     }
 
     const { code } = parseResult.data;
+    const supabaseAdmin = getSupabaseAdmin();
 
-    // 3. Retrieve from cache and check expiration
-    const entry = otpCache.get(user.id);
-    if (!entry) {
+    // 3. Query verification entry from database
+    const { data: entry, error: fetchError } = await supabaseAdmin
+      .from('phone_verifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (fetchError || !entry) {
       return NextResponse.json(
         { error: 'No verification code found. Please request a code first.' },
         { status: 400 }
       );
     }
 
-    if (Date.now() > entry.expiresAt) {
-      otpCache.delete(user.id);
+    // Check expiration
+    if (new Date(entry.expires_at).getTime() < Date.now()) {
+      await supabaseAdmin.from('phone_verifications').delete().eq('user_id', user.id);
       return NextResponse.json(
         { error: 'Verification code has expired. Please request a new code.' },
         { status: 400 }
       );
     }
 
-    // 4. Validate matching code using timing-safe comparison
-    const codeBuffer = Buffer.from(code);
-    const entryBuffer = Buffer.from(entry.code);
-    const isMatch = codeBuffer.length === entryBuffer.length && crypto.timingSafeEqual(codeBuffer, entryBuffer);
+    // 4. Validate matching code using timing-safe SHA-256 hash comparison
+    const inputHash = hashOtpCode(code);
+    const inputHashBuffer = Buffer.from(inputHash, 'hex');
+    const storedHashBuffer = Buffer.from(entry.code_hash, 'hex');
+
+    const isMatch =
+      inputHashBuffer.length === storedHashBuffer.length &&
+      crypto.timingSafeEqual(inputHashBuffer, storedHashBuffer);
 
     if (!isMatch) {
-      entry.attempts += 1;
-      
-      if (entry.attempts >= 3) {
-        otpCache.delete(user.id);
+      const nextAttempts = (entry.attempts || 0) + 1;
+
+      if (nextAttempts >= 3) {
+        await supabaseAdmin.from('phone_verifications').delete().eq('user_id', user.id);
         return NextResponse.json(
           { error: 'Verification failed due to too many invalid attempts. Please request a new verification code.' },
           { status: 400 }
         );
       } else {
-        const remaining = 3 - entry.attempts;
+        await supabaseAdmin
+          .from('phone_verifications')
+          .update({ attempts: nextAttempts })
+          .eq('user_id', user.id);
+
+        const remaining = 3 - nextAttempts;
         return NextResponse.json(
           { error: `Invalid verification code. ${remaining} attempt(s) remaining.` },
           { status: 400 }
@@ -267,23 +299,21 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    // OTP verified! Clean from cache.
-    otpCache.delete(user.id);
+    // OTP verified! Delete verification entry
+    await supabaseAdmin.from('phone_verifications').delete().eq('user_id', user.id);
 
     // 5. Update user database profiles and auth credentials
-    const supabaseAdmin = getSupabaseAdmin();
-    const normalizedPhone = normalizePhoneNumber(entry.phoneNumber);
+    const normalizedPhone = normalizePhoneNumber(entry.phone_number);
 
-    // Update phone number directly in auth.users (which requires admin client)
     const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
       user.id,
-      { 
+      {
         phone: normalizedPhone,
         phone_confirm: true,
         user_metadata: {
           ...user.user_metadata,
-          phone_verified: true
-        }
+          phone_verified: true,
+        },
       }
     );
 

@@ -48,6 +48,14 @@ export const createListingSchema = z.object({
   is_quick_impression: z.boolean().default(false),
   impression_duration_seconds: z.number().int().min(5).max(30).default(5).optional(),
   parent_listing_id: z.string().uuid().nullable().optional(),
+  payment_rail: z.enum(['fiat_paymongo', 'crypto_web3']).default('fiat_paymongo').optional(),
+  crypto_chain: z.enum(['base', 'polygon', 'solana']).optional(),
+  crypto_token: z.string().default('USDC').optional(),
+  escrow_contract_address: z.string().optional(),
+  escrow_tx_hash: z.string().optional(),
+  platform_fee_percent: z.number().default(20.0).optional(),
+  platform_fee_amount: z.number().optional(),
+  bounty_pool_amount: z.number().optional(),
   variants: z.array(
     z.object({
       id: z.string(),

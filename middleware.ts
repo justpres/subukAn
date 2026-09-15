@@ -125,9 +125,17 @@ export async function middleware(request: NextRequest) {
       // Fetch user profile from the database
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, is_admin')
         .eq('id', user.id)
         .single()
+
+      // Allow and guard admin routes
+      if (pathname.startsWith('/dashboard/admin')) {
+        if (process.env.NODE_ENV === 'production' && !profile?.is_admin) {
+          return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
+        return response
+      }
 
       if (pathname === '/dashboard' || pathname === '/dashboard/') {
         const forceSelect = request.nextUrl.searchParams.get('select') === 'true'

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Fetch target listing and verify poster ownership
     const { data: listing, error: listingError } = await supabase
       .from('listings')
-      .select('id, poster_id, title, total_budget, status')
+      .select('id, poster_id, title, total_budget, rate_per_tester, slots_count, status, payment_rail, crypto_chain')
       .eq('id', listing_id)
       .single()
 
@@ -49,6 +49,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Listing is not in a payable status' }, { status: 400 })
     }
 
+    // If Web3 Crypto rail
+    if (listing.payment_rail === 'crypto_web3') {
+      const { convertPhpToUsdc, calculateDualRailSplit } = await import('@/lib/web3/client')
+      const { formatCampaignParams, SUBUKAN_ESCROW_ABI } = await import('@/lib/web3/escrow')
+      
+      const grossUsdc = convertPhpToUsdc(listing.total_budget)
+      const slotRateUsdc = convertPhpToUsdc(listing.rate_per_tester)
+      const web3Params = formatCampaignParams(listing.id, grossUsdc, slotRateUsdc, listing.slots_count)
+      const split = calculateDualRailSplit(grossUsdc, 20)
+
+      return NextResponse.json({
+        success: true,
+        payment_rail: 'crypto_web3',
+        crypto_chain: listing.crypto_chain || 'base',
+        gross_usdc: grossUsdc,
+        platform_fee_usdc: split.platformFee,
+        bounty_pool_usdc: split.netEscrowPool,
+        web3_params: {
+          listing_id_bytes32: web3Params.listingId,
+          gross_units: web3Params.grossUnits.toString(),
+          slot_units: web3Params.slotUnits.toString(),
+          slots: web3Params.slots.toString(),
+        },
+      })
+    }
+
+    // Default: Fiat PayMongo rail
     // Fetch poster's custom payment settings or fallback
     const { data: posterSettings } = await supabase
       .from('poster_payment_settings')
@@ -78,6 +105,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      payment_rail: 'fiat_paymongo',
       checkout_url: paymentLinkResult.url,
       reference_number: paymentLinkResult.reference_number || listing.id,
       amount: listing.total_budget,

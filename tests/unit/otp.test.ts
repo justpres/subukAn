@@ -1,11 +1,62 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST, PUT } from '@/app/api/auth/verify-phone/route';
+import crypto from 'crypto';
 
-// Mock Supabase
+// In-memory mock storage for phone_verifications table in tests
+let mockVerificationsDb = new Map<string, any>();
+
 const mockGetUser = vi.fn();
 const mockUpdateUserById = vi.fn();
-const mockFrom = vi.fn();
+
+// Build chained query builder for phone_verifications and profiles
+const mockFrom = vi.fn((table: string) => {
+  if (table === 'phone_verifications') {
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn((field: string, val: string) => ({
+          maybeSingle: vi.fn(async () => {
+            const entry = mockVerificationsDb.get(val);
+            return { data: entry || null, error: null };
+          }),
+        })),
+      })),
+      upsert: vi.fn(async (payload: any) => {
+        mockVerificationsDb.set(payload.user_id, { ...payload });
+        return { data: payload, error: null };
+      }),
+      update: vi.fn((updatePayload: any) => ({
+        eq: vi.fn(async (field: string, val: string) => {
+          const entry = mockVerificationsDb.get(val);
+          if (entry) {
+            mockVerificationsDb.set(val, { ...entry, ...updatePayload });
+          }
+          return { data: mockVerificationsDb.get(val), error: null };
+        }),
+      })),
+      delete: vi.fn(() => ({
+        eq: vi.fn(async (field: string, val: string) => {
+          mockVerificationsDb.delete(val);
+          return { error: null };
+        }),
+      })),
+    };
+  }
+
+  if (table === 'profiles') {
+    return {
+      update: vi.fn(() => ({
+        eq: vi.fn(async () => ({ error: null })),
+      })),
+    };
+  }
+
+  return {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+});
 
 vi.mock('@/lib/supabase/server', () => ({
   createRouteHandlerClient: vi.fn(() => ({
@@ -33,18 +84,14 @@ describe('OTP Verification API Route (verify-phone)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Clear global cache if populated
-    const cache = (globalThis as any).otpCache;
-    if (cache) {
-      cache.clear();
-    }
+    mockVerificationsDb.clear();
     mockGetUser.mockResolvedValue({ data: { user: mockUser }, error: null });
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://mock.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-service-role-key';
   });
 
   describe('POST /api/auth/verify-phone', () => {
-    it('should generate a cryptographically secure 4-digit code and initialize attempts to 0', async () => {
+    it('should generate a 4-digit code, hash it with SHA-256, and store in database', async () => {
       const req = new NextRequest('http://localhost:3000/api/auth/verify-phone', {
         method: 'POST',
         body: JSON.stringify({ phoneNumber: mockPhone }),
@@ -56,46 +103,41 @@ describe('OTP Verification API Route (verify-phone)', () => {
       expect(res.status).toBe(200);
       expect(json.success).toBe(true);
 
-      const cache = (globalThis as any).otpCache;
-      expect(cache).toBeDefined();
-      const cachedEntry = cache.get(mockUser.id);
-      expect(cachedEntry).toBeDefined();
-      expect(cachedEntry.phoneNumber).toBe(mockPhone);
-      expect(cachedEntry.attempts).toBe(0);
-      expect(cachedEntry.code).toMatch(/^\d{4}$/);
-      
-      const numericCode = parseInt(cachedEntry.code, 10);
-      expect(numericCode).toBeGreaterThanOrEqual(1000);
-      expect(numericCode).toBeLessThan(10000);
+      const dbEntry = mockVerificationsDb.get(mockUser.id);
+      expect(dbEntry).toBeDefined();
+      expect(dbEntry.phone_number).toBe(mockPhone);
+      expect(dbEntry.attempts).toBe(0);
+      expect(dbEntry.code_hash).toBeDefined();
+      expect(dbEntry.code_hash).toMatch(/^[a-f0-9]{64}$/); // SHA-256 hex string
+
+      if (json.devOtpCode) {
+        const expectedHash = crypto.createHash('sha256').update(json.devOtpCode).digest('hex');
+        expect(dbEntry.code_hash).toBe(expectedHash);
+      }
     });
   });
 
   describe('PUT /api/auth/verify-phone', () => {
+    let sentOtpCode: string;
+
     beforeEach(async () => {
-      // Seed OTP cache before each PUT test
+      // Seed OTP in database before each PUT test
       const req = new NextRequest('http://localhost:3000/api/auth/verify-phone', {
         method: 'POST',
         body: JSON.stringify({ phoneNumber: mockPhone }),
       });
-      await POST(req);
+      const res = await POST(req);
+      const json = await res.json();
+      sentOtpCode = json.devOtpCode;
     });
 
-    it('should verify successfully with the correct OTP code', async () => {
-      const cache = (globalThis as any).otpCache;
-      const cachedEntry = cache.get(mockUser.id);
-      expect(cachedEntry).toBeDefined();
-      const correctCode = cachedEntry.code;
-
+    it('should verify successfully with the correct OTP code and delete DB record', async () => {
+      expect(sentOtpCode).toBeDefined();
       mockUpdateUserById.mockResolvedValue({ data: { user: {} }, error: null });
-      mockFrom.mockReturnValue({
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: null }),
-        }),
-      });
 
       const req = new NextRequest('http://localhost:3000/api/auth/verify-phone', {
         method: 'PUT',
-        body: JSON.stringify({ code: correctCode }),
+        body: JSON.stringify({ code: sentOtpCode }),
       });
 
       const res = await PUT(req);
@@ -103,13 +145,11 @@ describe('OTP Verification API Route (verify-phone)', () => {
 
       expect(res.status).toBe(200);
       expect(json.success).toBe(true);
-      expect(cache.has(mockUser.id)).toBe(false); // Cache should be cleared
+      expect(mockVerificationsDb.has(mockUser.id)).toBe(false); // Database entry deleted upon verification
     });
 
     it('should increment attempts and show remaining attempts on incorrect code', async () => {
-      const cache = (globalThis as any).otpCache;
-      const cachedEntry = cache.get(mockUser.id);
-      const wrongCode = cachedEntry.code === '1111' ? '2222' : '1111';
+      const wrongCode = sentOtpCode === '1111' ? '2222' : '1111';
 
       // 1st wrong attempt
       const req1 = new NextRequest('http://localhost:3000/api/auth/verify-phone', {
@@ -121,7 +161,7 @@ describe('OTP Verification API Route (verify-phone)', () => {
 
       expect(res1.status).toBe(400);
       expect(json1.error).toContain('2 attempt(s) remaining');
-      expect(cachedEntry.attempts).toBe(1);
+      expect(mockVerificationsDb.get(mockUser.id).attempts).toBe(1);
 
       // 2nd wrong attempt
       const req2 = new NextRequest('http://localhost:3000/api/auth/verify-phone', {
@@ -133,7 +173,7 @@ describe('OTP Verification API Route (verify-phone)', () => {
 
       expect(res2.status).toBe(400);
       expect(json2.error).toContain('1 attempt(s) remaining');
-      expect(cachedEntry.attempts).toBe(2);
+      expect(mockVerificationsDb.get(mockUser.id).attempts).toBe(2);
 
       // 3rd wrong attempt - should delete the entry and show failure
       const req3 = new NextRequest('http://localhost:3000/api/auth/verify-phone', {
@@ -145,7 +185,7 @@ describe('OTP Verification API Route (verify-phone)', () => {
 
       expect(res3.status).toBe(400);
       expect(json3.error).toContain('Verification failed due to too many invalid attempts');
-      expect(cache.has(mockUser.id)).toBe(false); // Deleted from cache
+      expect(mockVerificationsDb.has(mockUser.id)).toBe(false); // Deleted from database
     });
   });
 });

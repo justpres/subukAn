@@ -63,19 +63,19 @@ interface TaskResponseState {
   first_click_time_ms?: number | null;
 }
 
-const NDA_CONTENT = `subukAn Tester Agreement & NDA - Five-Second Test
+const NDA_CONTENT = `subukAn Tester Non-Disclosure & Privacy Agreement — Five-Second Test
 
-By participating in this test, you agree to the following binding conditions:
+By participating in this visual impression test, you agree to the following terms:
 
-1. HONEST & HIGH-EFFORT COMPLETION: You must execute all tasks exactly as described. Payment is strictly subject to the poster's review. Submission of spam, low-effort summaries, or fake proofs will result in immediate disqualification and account flag.
+1. STRICT CONFIDENTIALITY (NDA): The design, wireframes, and branding shown during this test are strictly confidential. You agree NOT to take screenshots, recordings, or distribute test assets outside subukAn.
 
-2. CONFIDENTIALITY: The application under test, its features, screenshots, and internal workings are strictly confidential. You may not distribute, discuss, or share any media, screenshots, recordings, or code outside the subukAn portal.
+2. GENUINE FIRST IMPRESSION: You will be shown a design for 5 seconds. The test must reflect your genuine, real-time memory without using secondary recording devices.
 
-3. TIMED VISUAL IMPRESSION RULES: You will be shown a design for exactly 5 seconds. You agree not to take screenshots, recordings, photos, or note down key details using secondary devices. The test must reflect your genuine, real-time memory and first impression.
+3. QUALITY & INTEGRITY: Answer the post-test impression questions accurately and thoroughly. Low-effort or spam answers will be rejected.
 
-4. ESCROW RELEASES: Funds are held safely in escrow. Upon submission, the poster has up to 30 or 60 minutes to review. If they do not take action, payment is automatically released.
+4. GUARANTEED PAYOUTS: Once approved (or upon expiration of the 72-hour review window), your bounty is credited to your Withdrawable Earnings.
 
-Scroll down and review all terms to accept.`;
+Scroll down completely to accept and begin.`;
 
 export default function FiveSecondTestWorkspace() {
   const params = useParams();

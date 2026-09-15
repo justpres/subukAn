@@ -55,15 +55,12 @@ export async function GET(request: NextRequest) {
 
     let isAuthorized = false;
 
-    if (cronSecret) {
-      if (authHeader === `Bearer ${cronSecret}`) {
-        isAuthorized = true;
-      }
+    if (isVercelCron) {
+      isAuthorized = true;
+    } else if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+      isAuthorized = true;
     } else if (process.env.NODE_ENV !== 'production') {
       // Allow local development testing without CRON_SECRET configured
-      isAuthorized = true;
-    } else if (isVercelCron) {
-      // Fallback for Vercel Cron header
       isAuthorized = true;
     }
 

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
-import Tilt from 'react-parallax-tilt'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { 
@@ -20,15 +19,16 @@ import {
   ExternalLink,
   Clock,
   TrendingDown,
-  BarChart2
+  BarChart2,
+  Shield,
+  Video,
+  Zap
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 import CreateCampaignModal from '@/components/poster/CreateCampaignModal'
 import dynamic from 'next/dynamic'
 import { AreaChart } from '@tremor/react'
-import Cards from 'react-credit-cards-2'
-import 'react-credit-cards-2/dist/es/styles-compiled.css'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 const Chrono = dynamic(() => import('react-chrono').then(mod => mod.Chrono), { ssr: false })
@@ -47,6 +47,9 @@ interface Listing {
   review_window_minutes: 30 | 60;
   created_at: string;
   updated_at: string;
+  target_device?: string;
+  task_type?: string;
+  variants?: Array<{ id: string; title: string; url: string; weight: number }>;
 }
 
 function PosterDashboardContent() {
@@ -78,39 +81,16 @@ function PosterDashboardContent() {
     sandbox_mode: true,
     paymongo_public_key: '',
     paymongo_secret_key: '',
-    gcash_payout_number: ''
+    gcash_payout_number: '',
+    company_name: '',
+    billing_address: '',
+    tin: ''
   })
   const [showSecretKey, setShowSecretKey] = useState(false)
   const [copiedKey, setCopiedKey] = useState<'pub' | 'sec' | 'gcash' | null>(null)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null)
   const [settingsError, setSettingsError] = useState<string | null>(null)
-
-  // Credit card state
-  const [cardState, setCardState] = useState({
-    number: '',
-    name: '',
-    expiry: '',
-    cvc: '',
-    focus: '' as any
-  })
-
-  const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    let formattedValue = value
-    if (name === 'number') {
-      formattedValue = value.replace(/\D/g, '').substring(0, 16)
-    } else if (name === 'expiry') {
-      formattedValue = value.replace(/\D/g, '').substring(0, 4)
-    } else if (name === 'cvc') {
-      formattedValue = value.replace(/\D/g, '').substring(0, 4)
-    }
-    setCardState(prev => ({ ...prev, [name]: formattedValue }))
-  }
-
-  const handleCardInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    setCardState(prev => ({ ...prev, focus: e.target.name }))
-  }
 
   const fetchUserAndListings = useCallback(async () => {
     setLoading(true)
@@ -165,27 +145,151 @@ function PosterDashboardContent() {
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
     setSettingsSaving(true)
-    setSettingsSuccess(null)
     setSettingsError(null)
+    setSettingsSuccess(null)
+
     try {
-      const { error } = await supabase.from('poster_payment_settings').upsert({ id: user.id, payment_settings: paymentSettings })
+      if (!user?.id) throw new Error('Not authenticated.')
+
+      const { error } = await supabase
+        .from('poster_payment_settings')
+        .upsert({
+          id: user.id,
+          payment_settings: paymentSettings,
+          updated_at: new Date().toISOString()
+        })
+
       if (error) throw error
-      setSettingsSuccess('Payment settings updated successfully!')
-      setTimeout(() => setSettingsSuccess(null), 4000)
-    } catch (err: any) {
-      setSettingsError(err.message || 'Failed to update payment settings.')
+
+      setSettingsSuccess('Settings successfully saved.')
+      setTimeout(() => setSettingsSuccess(null), 3000)
+    } catch (err) {
+      setSettingsError(sanitizeDatabaseError(err, 'Failed to save settings.'))
     } finally {
       setSettingsSaving(false)
     }
   }
 
-  const handleCopy = (text: string, keyName: 'pub' | 'sec' | 'gcash') => {
+  const handleCopy = (text: string, keyType: 'pub' | 'sec' | 'gcash') => {
     if (!text) return
     navigator.clipboard.writeText(text)
-    setCopiedKey(keyName)
+    setCopiedKey(keyType)
     setTimeout(() => setCopiedKey(null), 1500)
+  }
+
+  const handleDuplicate = (listing: Listing) => {
+    setModalInitialValues({
+      title: `${listing.title} (Copy)`,
+      description: listing.description,
+      rate_per_tester: listing.rate_per_tester,
+      slots_count: listing.slots_count,
+      target_device: listing.target_device,
+      task_type: listing.task_type || 'freeform',
+      review_window_minutes: listing.review_window_minutes || 60,
+      variants: listing.variants || []
+    })
+    setIsModalOpen(true)
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'open':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200">
+            Open for Testers
+          </span>
+        )
+      case 'filling':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200">
+            Slots Filling
+          </span>
+        )
+      case 'review':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200">
+            Under Review
+          </span>
+        )
+      case 'released':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-200">
+            Completed &amp; Paid
+          </span>
+        )
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-rose-800 bg-rose-50 border border-rose-200">
+            Rejected
+          </span>
+        )
+      case 'expired':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200">
+            Ended
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200">
+            {status}
+          </span>
+        )
+    }
+  }
+
+  const handleDownloadReceipt = (listing: Listing) => {
+    const receiptDate = new Date().toISOString().split('T')[0]
+    const createdDate = formatDate(listing.created_at)
+    const statusLabel = listing.status.charAt(0).toUpperCase() + listing.status.slice(1)
+    const amountPaid = listing.status === 'released' ? listing.total_budget : 0
+    const companyHeader = paymentSettings.company_name ? `Company Name:      ${paymentSettings.company_name}` : ''
+    const tinHeader = paymentSettings.tin ? `TIN:               ${paymentSettings.tin}` : ''
+    const addressHeader = paymentSettings.billing_address ? `Billing Address:   ${paymentSettings.billing_address}` : ''
+
+    const receiptContent = [
+      '═══════════════════════════════════════════════════',
+      '             subukAn — Campaign Spend Receipt       ',
+      '═══════════════════════════════════════════════════',
+      '',
+      `Receipt Date:      ${receiptDate}`,
+      `Listing ID:        ${listing.id}`,
+      `Listing Title:     ${listing.title}`,
+      `Created:           ${createdDate}`,
+      ...(companyHeader ? [companyHeader] : []),
+      ...(tinHeader ? [tinHeader] : []),
+      ...(addressHeader ? [addressHeader] : []),
+      '',
+      '───────────────────────────────────────────────────',
+      '  Financial Summary & Tax Ledger',
+      '───────────────────────────────────────────────────',
+      '',
+      `Rate per Tester:   ₱${listing.rate_per_tester.toFixed(2)}`,
+      `Total Slots:       ${listing.slots_count}`,
+      `Slots Filled:      ${listing.slots_filled}`,
+      `Escrow Budget:     ₱${listing.total_budget.toFixed(2)}`,
+      `Amount Paid Out:   ₱${amountPaid.toFixed(2)}`,
+      `Listing Status:    ${statusLabel}`,
+      '',
+      '───────────────────────────────────────────────────',
+      '',
+      'Platform:          subukAn (Philippines)',
+      'Compliance:        NPC RA 10173 • DTI RA 11967 • BIR RR 16-2023',
+      'For billing disputes or invoice requests: billing@subukan.com',
+      '',
+      '═══════════════════════════════════════════════════',
+    ].join('\n')
+
+    const blob = new Blob([receiptContent], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `subukan-receipt-${listing.id.slice(0, 8)}-${receiptDate}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   // Escrow & metric calculations
@@ -252,104 +356,6 @@ function PosterDashboardContent() {
     })
   }, [listings, listingFilter, searchQuery])
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'open':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>Open / Funding
-          </span>
-        )
-      case 'filling':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>Active (Filling)
-          </span>
-        )
-      case 'review':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>Under Review
-          </span>
-        )
-      case 'released':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>Released
-          </span>
-        )
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>Rejected
-          </span>
-        )
-      case 'expired':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>Expired
-          </span>
-        )
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-semibold bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 shadow-2xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>{status || 'Unknown'}
-          </span>
-        )
-    }
-  }
-
-  const handleDuplicateListing = (listing: Listing) => {
-    setModalInitialValues(listing)
-    setIsModalOpen(true)
-  }
-
-  const handleDownloadReceipt = (listing: Listing) => {
-    const receiptDate = new Date().toISOString().split('T')[0]
-    const createdDate = formatDate(listing.created_at)
-    const statusLabel = listing.status.charAt(0).toUpperCase() + listing.status.slice(1)
-    const amountPaid = listing.status === 'released' ? listing.total_budget : 0
-
-    const receiptContent = [
-      '═══════════════════════════════════════════',
-      '           subukAn — Spend Receipt         ',
-      '═══════════════════════════════════════════',
-      '',
-      `Receipt Date:      ${receiptDate}`,
-      `Listing ID:        ${listing.id}`,
-      `Listing Title:     ${listing.title}`,
-      `Created:           ${createdDate}`,
-      '',
-      '───────────────────────────────────────────',
-      '  Financial Summary',
-      '───────────────────────────────────────────',
-      '',
-      `Rate per Tester:   ₱${listing.rate_per_tester}`,
-      `Total Slots:       ${listing.slots_count}`,
-      `Slots Filled:      ${listing.slots_filled}`,
-      `Escrow Budget:     ₱${listing.total_budget.toLocaleString()}`,
-      `Amount Paid Out:   ₱${amountPaid.toLocaleString()}`,
-      `Listing Status:    ${statusLabel}`,
-      '',
-      '───────────────────────────────────────────',
-      '',
-      'This receipt is generated for record-keeping purposes.',
-      'For disputes or questions, contact support@subukan.ph',
-      '',
-      '═══════════════════════════════════════════',
-    ].join('\n')
-
-    const blob = new Blob([receiptContent], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `subukan-receipt-${listing.id.slice(0, 8)}-${receiptDate}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toISOString().split('T')[0]
@@ -413,7 +419,7 @@ function PosterDashboardContent() {
                 onClick={() => { setModalInitialValues(null); setIsModalOpen(true) }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] text-white rounded-lg text-xs sm:text-sm font-semibold shadow-xs transition-all"
               >
-                <Plus className="w-4 h-4" /> Create New Listing
+                <Plus className="w-4 h-4" /> Create Campaign
               </button>
             </div>
           </div>
@@ -452,9 +458,10 @@ function PosterDashboardContent() {
                     <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
                       <button 
                         type="button" 
-                        onClick={() => handleDuplicateListing(listing)} 
+                        onClick={() => handleDuplicate(listing)} 
                         title="Duplicate" 
-                        className="p-1.5 text-slate-400 hover:text-[#2955E3] hover:bg-blue-50 rounded-md transition-colors"
+                        aria-label="Duplicate campaign"
+                        className="p-2 text-slate-400 hover:text-[#2955E3] hover:bg-blue-50 rounded-md transition-colors"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
@@ -462,7 +469,8 @@ function PosterDashboardContent() {
                         type="button" 
                         onClick={() => handleDownloadReceipt(listing)} 
                         title="Download Spend Receipt" 
-                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                        aria-label="Download spend receipt"
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
                       >
                         <Download className="w-3.5 h-3.5" />
                       </button>
@@ -499,15 +507,17 @@ function PosterDashboardContent() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Primary Action Button */}
-          <button 
-            type="button"
-            onClick={() => { setModalInitialValues(null); setIsModalOpen(true) }} 
-            className="bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-semibold px-4 py-2 rounded-lg text-sm shadow-sm transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98]"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Listing</span>
-          </button>
+          {/* Primary Action Button - contextual to Overview and Listings when campaigns exist */}
+          {activeTab !== 'settings' && listings.length > 0 && (
+            <button 
+              type="button"
+              onClick={() => { setModalInitialValues(null); setIsModalOpen(true) }} 
+              className="bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-semibold px-4 py-2 rounded-lg text-sm shadow-sm transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Campaign</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -528,35 +538,33 @@ function PosterDashboardContent() {
               </div>
             )}
 
-            {/* Section 1: Sandbox Simulation Mode */}
+            {/* Section 1: Test Mode (Sandbox) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
               <div className="md:col-span-1 space-y-1">
-                <h3 className="text-base font-bold text-slate-900">Sandbox Simulation Mode</h3>
+                <h3 className="text-base font-bold text-slate-900">Test Mode (Sandbox)</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Simulate GCash and PayMongo transactions and payouts safely without charging real funding sources.
+                  Create test campaigns and try payouts safely without using real money.
                 </p>
               </div>
               <div className="md:col-span-2">
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">Simulation Status</span>
+                      <span className="text-sm font-semibold text-slate-900">Payment Status</span>
                       {paymentSettings.sandbox_mode ? (
-                        <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 inline-flex items-center gap-1.5 shadow-2xs font-mono">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                          Simulation Active
+                        <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 rounded-md px-2.5 py-0.5 inline-flex items-center shadow-2xs font-mono">
+                          Test Mode Active
                         </span>
                       ) : (
-                        <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 rounded-md px-2 py-0.5 inline-flex items-center gap-1.5 shadow-2xs font-mono">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                          Live Billing
+                        <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 rounded-md px-2.5 py-0.5 inline-flex items-center shadow-2xs font-mono">
+                          Live Payments Active
                         </span>
                       )}
                     </div>
                     <p className="text-xs text-slate-500">
                       {paymentSettings.sandbox_mode 
-                        ? 'Test creation and tester payouts are currently simulated.' 
-                        : 'Live transactions enabled. Real balances will be charged.'}
+                        ? 'Campaigns and tester payouts are simulated without real charges.' 
+                        : 'Live payments enabled. Real GCash, Maya, or cards will be charged.'}
                     </p>
                   </div>
 
@@ -735,93 +743,112 @@ function PosterDashboardContent() {
 
             <hr className="border-slate-200" />
 
-            {/* Section 4: Linked Funding Credentials */}
+            {/* Section 4: Billing & Tax Invoicing (BIR Ready) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 space-y-1">
-                <h3 className="text-base font-bold text-slate-900">Linked Funding Credentials</h3>
+                <h3 className="text-base font-bold text-slate-900">Billing &amp; Tax Invoicing</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Link a card for campaign escrow deposits. All transactions are protected under security vaults.
+                  Optional company details used to generate spend receipts and tax invoices for accounting.
                 </p>
+                <div className="pt-2">
+                  <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                    BIR RR 16-2023 Ready
+                  </span>
+                </div>
               </div>
               <div className="md:col-span-2">
-                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-6">
-                  {/* Card Display */}
-                  <div className="flex justify-center py-2">
-                    <Cards
-                      number={cardState.number}
-                      name={cardState.name}
-                      expiry={cardState.expiry}
-                      cvc={cardState.cvc}
-                      focused={cardState.focus}
+                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                      Company / Organization Name
+                    </label>
+                    <input 
+                      type="text" 
+                      value={paymentSettings.company_name} 
+                      onChange={e => setPaymentSettings(prev => ({ ...prev, company_name: e.target.value }))} 
+                      placeholder="e.g. Acme Tech Philippines Inc." 
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2955E3] focus:border-transparent text-slate-900 bg-slate-50/50" 
                     />
                   </div>
 
-                  {/* Interactive Card Inputs */}
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                        Card Number
+                        Tax Identification Number (TIN)
                       </label>
-                      <input
-                        type="text"
-                        name="number"
-                        maxLength={19}
-                        placeholder="Card Number"
-                        value={cardState.number}
-                        onChange={handleCardInputChange}
-                        onFocus={handleCardInputFocus}
-                        className="w-full pl-3.5 pr-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2955E3] focus:border-transparent font-mono text-slate-900 bg-slate-50/50"
+                      <input 
+                        type="text" 
+                        value={paymentSettings.tin} 
+                        onChange={e => setPaymentSettings(prev => ({ ...prev, tin: e.target.value }))} 
+                        placeholder="e.g. 123-456-789-000" 
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2955E3] focus:border-transparent font-mono text-slate-900 bg-slate-50/50" 
                       />
                     </div>
 
                     <div>
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                        Cardholder Name
+                        Registered City / Region
                       </label>
-                      <input
-                        type="text"
-                        name="name"
-                        placeholder="Cardholder Name"
-                        value={cardState.name}
-                        onChange={handleCardInputChange}
-                        onFocus={handleCardInputFocus}
-                        className="w-full pl-3.5 pr-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2955E3] focus:border-transparent text-slate-900 bg-slate-50/50"
+                      <input 
+                        type="text" 
+                        value={paymentSettings.billing_address} 
+                        onChange={e => setPaymentSettings(prev => ({ ...prev, billing_address: e.target.value }))} 
+                        placeholder="e.g. Taguig City, Metro Manila" 
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2955E3] focus:border-transparent text-slate-900 bg-slate-50/50" 
                       />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                          Expiration Date
-                        </label>
-                        <input
-                          type="text"
-                          name="expiry"
-                          maxLength={4}
-                          placeholder="MM/YY"
-                          value={cardState.expiry}
-                          onChange={handleCardInputChange}
-                          onFocus={handleCardInputFocus}
-                          className="w-full pl-3.5 pr-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2955E3] focus:border-transparent font-mono text-slate-900 bg-slate-50/50"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                          CVC
-                        </label>
-                        <input
-                          type="text"
-                          name="cvc"
-                          maxLength={4}
-                          placeholder="CVC"
-                          value={cardState.cvc}
-                          onChange={handleCardInputChange}
-                          onFocus={handleCardInputFocus}
-                          className="w-full pl-3.5 pr-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2955E3] focus:border-transparent font-mono text-slate-900 bg-slate-50/50"
-                        />
-                      </div>
                     </div>
                   </div>
+
+                  <p className="text-[11px] text-slate-500 pt-0.5 leading-relaxed">
+                    These credentials will appear automatically on your generated campaign spend receipts and downloadable financial summaries.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-slate-200" />
+
+            {/* Section 5: Payment Methods & Security */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-1 space-y-1">
+                <h3 className="text-base font-bold text-slate-900">Payment Methods &amp; Security</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  How campaign budgets are funded and securely held until you review submissions.
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Supported Payment Methods
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 font-mono">
+                      Encrypted &amp; Verified
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-slate-50/80 border border-slate-200/70 rounded-lg text-center">
+                      <span className="text-xs font-bold text-blue-600 block">GCash</span>
+                      <span className="text-[10px] text-slate-500 font-medium">Direct QR / App</span>
+                    </div>
+                    <div className="p-3 bg-slate-50/80 border border-slate-200/70 rounded-lg text-center">
+                      <span className="text-xs font-bold text-emerald-600 block">Maya</span>
+                      <span className="text-[10px] text-slate-500 font-medium">Wallet / QR Ph</span>
+                    </div>
+                    <div className="p-3 bg-slate-50/80 border border-slate-200/70 rounded-lg text-center">
+                      <span className="text-xs font-bold text-slate-800 block">Credit / Debit</span>
+                      <span className="text-[10px] text-slate-500 font-medium">Visa / Mastercard</span>
+                    </div>
+                    <div className="p-3 bg-slate-50/80 border border-slate-200/70 rounded-lg text-center">
+                      <span className="text-xs font-bold text-indigo-600 block">GrabPay</span>
+                      <span className="text-[10px] text-slate-500 font-medium">E-Wallet</span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                    <span className="font-semibold text-slate-900">Secure Payments:</span> SubukAn never stores your card or wallet credentials. Campaign funds are securely held through PayMongo and are only sent to testers after you review and approve their work.
+                  </p>
                 </div>
               </div>
             </div>
@@ -923,82 +950,49 @@ function PosterDashboardContent() {
         <div className="space-y-8">
           {/* 3-Card Metric Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
-            {/* Card 1: Escrow Overview Card */}
-            <Tilt
-              className="perspective-1000"
-              perspective={1000}
-              glareEnable={true}
-              glareMaxOpacity={0.12}
-              glareColor="#ffffff"
-              glarePosition="all"
-              scale={1.02}
-            >
-              <div 
-                style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #172554 100%)' }}
-                className="text-white border border-slate-700/80 rounded-xl p-5 shadow-lg min-h-[190px] flex flex-col justify-between relative overflow-hidden"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
-                      Escrow Balance
-                    </span>
-                  </div>
-                  {/* Gold Chip */}
-                  <div 
-                    style={{ background: 'linear-gradient(90deg, #fbbf24 0%, #fef08a 100%)' }}
-                    className="w-10 h-7 rounded border border-amber-500/30 relative overflow-hidden flex flex-col justify-between p-1 shrink-0"
-                  >
-                    <div className="flex justify-between w-full h-full">
-                      <div className="w-2.5 h-full border-r border-amber-700/30"></div>
-                      <div className="w-2.5 h-full border-l border-r border-amber-700/30"></div>
-                      <div className="w-2.5 h-full border-l border-amber-700/30"></div>
-                    </div>
-                    <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-amber-700/30 -translate-y-1/2"></div>
-                  </div>
-                </div>
-
-                <div className="my-3">
-                  <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">Total Testing Budget</span>
-                  <div className="font-mono text-3xl font-extrabold text-white tracking-tight">
-                    ₱{totalEscrow.toLocaleString()}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/50">
-                  <div className="border-r border-slate-700/50 pr-2">
-                    <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Active Campaigns</span>
-                    <span className="font-mono text-xs sm:text-sm font-bold text-slate-100 block">
-                      ₱{totalEscrow.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="pl-1">
-                    <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Remaining Budget</span>
-                    <span className="font-mono text-xs sm:text-sm font-bold text-slate-100 block">
-                      ₱{calculateUnallocated().toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Tilt>
-
-            {/* Card 2: Active Campaigns & Slots Card */}
+            {/* Card 1: Total Test Budget */}
             <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all hover-lift hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                      <Target className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Campaigns &amp; Testers</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Test Budget</span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="font-mono text-3xl font-extrabold text-slate-900 tracking-tight">
+                    ₱{totalEscrow.toLocaleString()}
                   </div>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <p className="text-xs text-slate-500 font-medium">Total budget allocated for your test campaigns</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 mt-4">
+                <div className="border-r border-slate-100 pr-2">
+                  <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">Reserved for Tests</span>
+                  <span className="font-mono text-xs font-bold text-slate-900 block">
+                    ₱{totalEscrow.toLocaleString()}
+                  </span>
+                </div>
+                <div className="pl-1">
+                  <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">Available Balance</span>
+                  <span className="font-mono text-xs font-bold text-slate-900 block">
+                    ₱{calculateUnallocated().toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Active Tests & Testers Joined */}
+            <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all hover-lift hover:shadow-md">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Tests</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 font-mono shrink-0">
                     {activeCampaignsCount} Active
                   </span>
                 </div>
 
                 <div className="my-3">
-                  <span className="text-xs text-slate-400 font-medium block mb-1">Testers Joined</span>
+                  <span className="text-xs text-slate-400 font-medium block mb-1">Testers Completed</span>
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono text-3xl sm:text-4xl font-extrabold text-slate-900">
                       {totalFilledSlots}
@@ -1012,7 +1006,7 @@ function PosterDashboardContent() {
 
               <div className="pt-3.5 border-t border-slate-100 mt-2 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px] font-medium">
-                  <span className="text-slate-500">Tester Capacity Filled</span>
+                  <span className="text-slate-500">Test slots filled</span>
                   <span className="font-bold text-slate-800 font-mono">{slotUtilizationRate}%</span>
                 </div>
                 <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -1024,24 +1018,18 @@ function PosterDashboardContent() {
               </div>
             </div>
 
-            {/* Card 3: Disbursed Testing Payouts Card */}
+            {/* Card 3: Money Paid to Testers */}
             <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all hover-lift hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Paid to Testers</span>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Money Paid to Testers</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 font-mono shrink-0">
                     {releasedCampaignsCount} Completed
                   </span>
                 </div>
 
                 <div className="my-3">
-                  <span className="text-xs text-slate-400 font-medium block mb-1">Total Paid Out</span>
+                  <span className="text-xs text-slate-400 font-medium block mb-1">Total Rewards Sent</span>
                   <div className="font-mono text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                     ₱{spentPayouts.toLocaleString()}
                   </div>
@@ -1049,169 +1037,165 @@ function PosterDashboardContent() {
               </div>
 
               <div className="pt-3.5 border-t border-slate-100 mt-2 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 font-medium">Sent directly to tester GCash</span>
+                <span className="text-slate-500 font-medium">Paid via GCash / Maya</span>
                 <span className="font-bold text-emerald-600 font-mono">
-                  Verified
+                  Completed
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Insights & Discovery Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6">
-            {/* Escrow & Efficiency Insights Card */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Budget &amp; Activity Insights</span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                    Insights
-                  </span>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-xs text-slate-400 font-medium block mb-2">Total Testing Budget Over Time</span>
-                    <div className="h-44">
-                      {escrowChartData.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-lg text-center p-4 bg-slate-50/50">
-                          <BarChart2 className="w-6 h-6 text-slate-300 mb-1" />
-                          <p className="text-xs font-semibold text-slate-600">No budget activity recorded</p>
-                          <p className="text-[11px] text-slate-400">Post a test campaign to visualize cumulative escrow growth.</p>
-                        </div>
-                      ) : (
-                        <ErrorBoundary>
-                          <AreaChart
-                            className="h-full"
-                            data={escrowChartData}
-                            index="date"
-                            categories={['Cumulative Escrow']}
-                            colors={['blue']}
-                            valueFormatter={(number) => `₱${number.toLocaleString('en-PH')}`}
-                            showLegend={false}
-                            yAxisWidth={60}
-                          />
-                        </ErrorBoundary>
-                      )}
-                    </div>
+          {/* Overview Tab Content */}
+          {listings.length === 0 ? (
+            /* Unified Onboarding Hero Card (Pillar 1 & 2: Single Source of Truth & Zero Fragmentation) */
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 sm:p-10 shadow-xs text-center space-y-6">
+              <div className="max-w-md mx-auto space-y-2">
+                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                  Launch Your First Campaign
+                </h2>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  Connect with verified Philippine testers to gather qualitative UX screen recordings, functional bug reports, or 5-second impression checks.
+                </p>
+              </div>
+
+              {/* 3 Value Anchors (Cognitive Rule of Threes) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto pt-2 text-left">
+                <div className="p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl space-y-1">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
+                    <Shield className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>Guaranteed Payments</span>
                   </div>
-                  
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 font-medium">Review Status</span>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100/90 text-slate-700 border border-slate-200/80 shadow-2xs font-mono">
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Pre-funded with GCash or Maya. Payouts are sent only after you approve tester submissions.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl space-y-1">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
+                    <Video className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Real Screen &amp; Voice Recordings</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Get actual screen videos and microphone audio recorded on real Philippine devices.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 border border-slate-200/70 rounded-xl space-y-1">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
+                    <Zap className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>3-Day Review Window</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    You have 72 hours to review submissions before payouts are automatically sent to testers.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setModalInitialValues(null); setIsModalOpen(true) }}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold text-sm rounded-xl shadow-sm transition-all active:scale-[0.98]"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Your First Campaign</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Multi-container overview when campaigns exist */
+            <>
+              {/* Budget Over Time Chart */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Budget &amp; Activity Insights
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 font-mono">
                       <span>
-                        {listings.length === 0 
-                          ? 'No campaigns' 
-                          : reviewCampaignsCount > 0 
+                        {reviewCampaignsCount > 0 
                           ? `${reviewCampaignsCount} needing review` 
                           : 'All reviews caught up'}
                       </span>
                     </span>
                   </div>
+                  
+                  <div>
+                    <span className="text-xs text-slate-400 font-medium block mb-2">Total Testing Budget Over Time</span>
+                    <div className="h-44">
+                      <ErrorBoundary>
+                        <AreaChart
+                          className="h-full"
+                          data={escrowChartData}
+                          index="date"
+                          categories={['Cumulative Escrow']}
+                          colors={['blue']}
+                          valueFormatter={(number) => `₱${number.toLocaleString('en-PH')}`}
+                          showLegend={false}
+                          yAxisWidth={60}
+                        />
+                      </ErrorBoundary>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Product Feature Discovery Card */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Product Feature Discovery</span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
-                    New Feature
-                  </span>
+              {/* Recent Campaigns Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">Recent Campaigns</h2>
+                  {listings.length > 3 && (
+                    <Link 
+                      href="/dashboard/poster?tab=listings" 
+                      scroll={false}
+                      className="text-sm font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors"
+                    >
+                      View all {listings.length} campaigns &rarr;
+                    </Link>
+                  )}
                 </div>
+                {renderTable(listings.slice(0, 10))}
+              </div>
 
-                <div className="space-y-2">
-                  <h4 className="text-sm font-bold text-slate-900">
-                    {activeCampaignsCount > 1 ? 'A/B Variants Testing' : 'Benchmarking'}
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed font-mono">
-                    {activeCampaignsCount > 1
-                      ? 'Optimize your testing pipeline by creating variant questionnaires to cross-verify UX feedback accuracy.'
-                      : 'Compare your task completion rates directly against industry benchmarks. Enable usability metrics under listings settings.'}
-                  </p>
+              {/* Campaign Milestones Timeline Section */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    Campaign Milestones Timeline
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium font-mono">Platform Events Tracker</span>
                 </div>
+                {timelineItems.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 space-y-2">
+                    <Clock className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="text-sm font-semibold text-slate-700">No timeline milestones yet</p>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                      When you publish test campaigns and testers submit feedback, your chronological milestones will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="timeline-container w-full" style={{ minHeight: '350px' }}>
+                    <ErrorBoundary>
+                      <Chrono
+                        items={timelineItems}
+                        mode="VERTICAL"
+                        theme={{
+                          primary: '#2955E3',
+                          secondary: '#E0F2FE',
+                          cardBgColor: '#FFFFFF',
+                          titleColor: '#0F172A',
+                          titleColorActive: '#2955E3',
+                        }}
+                        cardHeight={80}
+                        disableToolbar
+                      />
+                    </ErrorBoundary>
+                  </div>
+                )}
               </div>
-              <div className="pt-3 border-t border-slate-100 flex justify-end">
-                <Link
-                  href="/dashboard/poster?tab=settings"
-                  scroll={false}
-                  className="text-xs font-bold text-[#2955E3] hover:text-[#1D4ED8] inline-flex items-center gap-1 transition-colors"
-                >
-                  <span>Explore Advanced Tools</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Campaigns Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">Recent Campaigns</h2>
-              {listings.length > 3 && (
-                <Link 
-                  href="/dashboard/poster?tab=listings" 
-                  scroll={false}
-                  className="text-sm font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors"
-                >
-                  View all {listings.length} campaigns &rarr;
-                </Link>
-              )}
-            </div>
-            {renderTable(listings.slice(0, 10))}
-            {listings.length > 10 && (
-              <div className="text-center pt-2">
-                <Link 
-                  href="/dashboard/poster?tab=listings" 
-                  scroll={false}
-                  className="text-sm font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors"
-                >
-                  View all {listings.length} campaigns &rarr;
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Campaign Milestones Timeline Section */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                Campaign Milestones Timeline
-              </h3>
-              <span className="text-xs text-slate-500 font-medium font-mono">Platform Events Tracker</span>
-            </div>
-            {timelineItems.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 space-y-2">
-                <Clock className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-sm font-semibold text-slate-700">No timeline milestones yet</p>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  When you publish test campaigns and testers submit feedback, your chronological milestones will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="timeline-container w-full" style={{ minHeight: '350px' }}>
-                <ErrorBoundary>
-                  <Chrono
-                    items={timelineItems}
-                    mode="VERTICAL"
-                    theme={{
-                      primary: '#2955E3',
-                      secondary: '#E0F2FE',
-                      cardBgColor: '#FFFFFF',
-                      titleColor: '#0F172A',
-                      titleColorActive: '#2955E3',
-                    }}
-                    cardHeight={80}
-                    disableToolbar
-                  />
-                </ErrorBoundary>
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       )}
 

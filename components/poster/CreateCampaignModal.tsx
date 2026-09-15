@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, AlertCircle, Trash2, HelpCircle, AlertTriangle } from 'lucide-react'
+import { Check, AlertCircle, Trash2, HelpCircle, AlertTriangle, ChevronRight, ArrowLeft } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { modalBackdropVariants, modalContentVariants } from '@/lib/utils/motion'
 import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
+import { convertPhpToUsdc, calculateDualRailSplit } from '@/lib/web3/client'
 
 interface CreateCampaignModalProps {
   isOpen: boolean
@@ -49,6 +52,10 @@ export default function CreateCampaignModal({
   const [parentListingId, setParentListingId] = useState('')
   const [isQuickImpression, setIsQuickImpression] = useState(false)
   const [impressionDurationSeconds, setImpressionDurationSeconds] = useState<number>(5)
+
+  // Dual-rail payment selection
+  const [paymentRail, setPaymentRail] = useState<'fiat_paymongo' | 'crypto_web3'>('fiat_paymongo')
+  const [cryptoWalletAddress, setCryptoWalletAddress] = useState('')
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -245,6 +252,12 @@ export default function CreateCampaignModal({
         parent_listing_id: parentListingId || undefined,
         is_quick_impression: isQuickImpression,
         impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : undefined,
+        payment_rail: paymentRail,
+        crypto_chain: paymentRail === 'crypto_web3' ? 'base' : undefined,
+        crypto_token: 'USDC',
+        platform_fee_percent: 20.0,
+        platform_fee_amount: calculateDualRailSplit(totalBudget, 20).platformFee,
+        bounty_pool_amount: calculateDualRailSplit(totalBudget, 20).netEscrowPool,
         questions: formQuestions,
       }
 
@@ -308,27 +321,67 @@ export default function CreateCampaignModal({
     }
   }
 
-  if (!isOpen || !mounted) return null
+  if (!mounted) return null
 
   return createPortal(
-    <div 
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="create-campaign-title"
-      className="fixed inset-0 z-[100] bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 transition-all animate-fadeIn"
-    >
-      <div className="bg-white rounded-[16px] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h3 id="create-campaign-title" className="font-extrabold text-xl text-gray-900">Create a Test Campaign</h3>
-          <button 
-            type="button"
-            onClick={onClose} 
-            aria-label="Close create campaign modal"
-            className="text-gray-400 hover:text-gray-600 text-2xl p-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          key="create-campaign-backdrop"
+          variants={modalBackdropVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-campaign-title"
+          className="fixed inset-0 z-[100] bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <motion.div 
+            key="create-campaign-card"
+            variants={modalContentVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="bg-white rounded-[16px] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            &times;
-          </button>
-        </div>
+            <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between shrink-0">
+              <div>
+                <h3 id="create-campaign-title" className="font-extrabold text-xl text-gray-900">Create a Test Campaign</h3>
+                {!checkoutUrl && (
+                  <span className="text-xs text-slate-500 font-medium mt-0.5 block">
+                    Step {step} of 5: {step === 1 ? 'App Info & Link' : step === 2 ? 'Rewards & Testers' : step === 3 ? 'Target Audience' : step === 4 ? 'Questions & Tasks' : 'Review & Fund'}
+                  </span>
+                )}
+              </div>
+              <button 
+                type="button"
+                onClick={onClose} 
+                aria-label="Close create campaign modal"
+                className="text-gray-400 hover:text-gray-600 text-2xl p-1.5 rounded-md hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+              >
+                &times;
+              </button>
+            </div>
+
+            {!checkoutUrl && (
+              <div className="px-6 pt-3 pb-2 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                <div 
+                  role="progressbar" 
+                  aria-label="Campaign creation progress" 
+                  aria-valuenow={step} 
+                  aria-valuemin={1} 
+                  aria-valuemax={5}
+                  className="flex items-center gap-2"
+                >
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <div key={s} className="flex-1 flex items-center">
+                      <div className={`h-1.5 w-full rounded-full transition-all duration-300 ${step >= s ? 'bg-[#2955E3]' : 'bg-slate-200'}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
         {checkoutUrl ? (
           <div className="p-6 space-y-6 text-center overflow-y-auto flex-1">
@@ -360,21 +413,8 @@ export default function CreateCampaignModal({
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col">
-            <div 
-              role="progressbar" 
-              aria-label="Campaign creation progress" 
-              aria-valuenow={step} 
-              aria-valuemin={1} 
-              aria-valuemax={5}
-              className="flex items-center gap-2 mb-4"
-            >
-              {[1, 2, 3, 4, 5].map((s) => (
-                <div key={s} className="flex-1 flex items-center">
-                  <div className={`h-2 w-full rounded-[4px] ${step >= s ? 'bg-blue-600' : 'bg-gray-200'}`} />
-                </div>
-              ))}
-            </div>
+          <>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
             {(Object.keys(errors).length > 0 || submitError) && (
               <div role="alert" className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-[12px] flex gap-3 text-sm">
@@ -723,41 +763,144 @@ export default function CreateCampaignModal({
 
             {step === 5 && (
               <div className="space-y-4">
-                <h4 className="font-bold text-lg text-slate-800">Step 5: Review &amp; Fund</h4>
-                <div className="p-6 bg-blue-50 border border-blue-100 rounded-[12px] flex flex-col items-center justify-center text-center space-y-2">
-                  <span className="text-gray-700 text-sm font-medium">Total Campaign Budget</span>
-                  <span className="text-4xl font-black text-blue-800">₱{formRate * formSlots}</span>
-                  <span className="text-xs text-gray-600 mt-2">({formSlots} testers at ₱{formRate} each)</span>
+                <h4 className="font-bold text-lg text-slate-800">Step 5: Review &amp; Fund Escrow</h4>
+
+                {/* Dual-Rail Selector Tabs */}
+                <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentRail('fiat_paymongo')}
+                    className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                      paymentRail === 'fiat_paymongo'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>🇵🇭 GCash / Maya / Cards</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">Default</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentRail('crypto_web3')}
+                    className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                      paymentRail === 'crypto_web3'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>🌐 USDC on Base L2</span>
+                    <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Web3</span>
+                  </button>
                 </div>
-                <p className="text-sm text-gray-700 text-center">
-                  Click confirm to set aside the campaign budget. Testers will be paid automatically once you approve their submissions.
-                </p>
+
+                {paymentRail === 'fiat_paymongo' ? (
+                  <div className="space-y-3">
+                    <div className="p-5 bg-blue-50/70 border border-blue-100 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between pb-3 border-b border-blue-200/60">
+                        <span className="text-xs font-semibold text-slate-600">Gross Campaign Budget</span>
+                        <span className="text-2xl font-black text-blue-900 font-mono">₱{totalBudget.toLocaleString()}</span>
+                      </div>
+                      <div className="space-y-1.5 text-xs text-slate-700">
+                        <div className="flex items-center justify-between">
+                          <span>Net Tester Escrow Pool (80%):</span>
+                          <span className="font-semibold text-slate-900 font-mono">₱{(totalBudget * 0.8).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-500">
+                          <span>SubukAn Platform Take-Rate (20%):</span>
+                          <span className="font-mono">₱{(totalBudget * 0.2).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                          <span>Verified Tester Slots:</span>
+                          <span className="font-mono">{formSlots} slots @ ₱{formRate} each</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 text-center leading-relaxed">
+                      Your funds will be locked securely in PayMongo escrow. Payouts are sent directly to testers upon your approval.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-5 bg-purple-50/70 border border-purple-100 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between pb-3 border-b border-purple-200/60">
+                        <div>
+                          <span className="text-xs font-semibold text-slate-600 block">USDC Escrow Budget</span>
+                          <span className="text-[10px] text-slate-400 font-mono">1 USD ≈ ₱58.00</span>
+                        </div>
+                        <span className="text-2xl font-black text-purple-900 font-mono">${convertPhpToUsdc(totalBudget)} USDC</span>
+                      </div>
+                      <div className="space-y-1.5 text-xs text-slate-700">
+                        <div className="flex items-center justify-between">
+                          <span>Net Tester Bounty (80%):</span>
+                          <span className="font-semibold text-slate-900 font-mono">${(convertPhpToUsdc(totalBudget) * 0.8).toFixed(2)} USDC</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-500">
+                          <span>Platform Fee (20%):</span>
+                          <span className="font-mono">${(convertPhpToUsdc(totalBudget) * 0.2).toFixed(2)} USDC</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-purple-700 pt-1 font-medium">
+                          <span>Network:</span>
+                          <span className="font-mono">Base L2 (&lt;$0.005 Gas)</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 text-center leading-relaxed">
+                      Locked in decentralized smart contract <code className="text-[10px] bg-slate-100 px-1 py-0.5 rounded font-mono">SubukanEscrow.sol</code> on Base.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="mt-auto pt-4 border-t border-gray-200 flex justify-between gap-3">
+            </div>
+
+            {/* Pinned Fixed Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-gray-200 bg-gray-50/90 flex items-center justify-between gap-3 shrink-0">
               {step > 1 ? (
-                <button type="button" onClick={prevStep} className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[8px] hover:bg-gray-100 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
-                  Back
+                <button 
+                  type="button" 
+                  onClick={prevStep} 
+                  className="px-4 py-2 border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 rounded-[8px] text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back</span>
                 </button>
               ) : (
-                <div />
+                <button 
+                  type="button" 
+                  onClick={onClose} 
+                  className="px-4 py-2 text-gray-500 hover:text-gray-700 text-xs font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
               )}
 
               {step < 5 ? (
-                <button type="button" onClick={nextStep} className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-[8px] text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
-                  Next
+                <button 
+                  type="button" 
+                  onClick={nextStep} 
+                  className="px-5 py-2.5 bg-[#2955E3] hover:bg-[#1D4ED8] text-white rounded-[8px] text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                >
+                  <span>Next: {step === 1 ? 'Rewards & Testers' : step === 2 ? 'Target Audience' : step === 3 ? 'Questions & Tasks' : 'Review & Fund'}</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
-                <button type="submit" onClick={handleSubmit} disabled={isSubmitting} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] text-sm font-semibold shadow-sm disabled:opacity-50 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
-                  {isSubmitting ? 'Funding...' : 'Confirm and Fund'}
+                <button 
+                  type="submit" 
+                  onClick={handleSubmit} 
+                  disabled={isSubmitting} 
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[8px] text-xs font-bold shadow-xs disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                >
+                  {isSubmitting ? 'Processing Escrow...' : `Confirm & Fund ₱${(formRate * formSlots).toLocaleString()}`}
                 </button>
               )}
             </div>
-          </div>
+          </>
         )}
-      </div>
-    </div>,
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body
   )
 }

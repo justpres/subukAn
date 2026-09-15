@@ -11,8 +11,10 @@ import {
   ArrowLeftRight, 
   LogOut, 
   X,
-  Settings
+  Settings,
+  Scale
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 interface SidebarProps {
@@ -27,14 +29,42 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
   const searchParams = useSearchParams()
   const currentTab = searchParams.get('tab') || ''
   const supabase = createBrowserClient()
+  const [isAdmin, setIsAdmin] = React.useState(false)
+
+  React.useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user?.id) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single()
+          if (data?.is_admin) {
+            setIsAdmin(true)
+          }
+        }
+      } catch {
+        // Non-blocking check
+      }
+    }
+    checkAdmin()
+  }, [supabase])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
-  const isPoster = role === 'poster'
-  const isTester = role === 'tester'
+  const currentRole = pathname.startsWith('/dashboard/tester') 
+    ? 'tester' 
+    : pathname.startsWith('/dashboard/poster') 
+      ? 'poster' 
+      : role || 'poster'
+
+  const isPoster = currentRole === 'poster'
+  const isTester = currentRole === 'tester'
 
   const links = []
 
@@ -46,6 +76,10 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
     links.push({ name: 'Available Tests', href: '/dashboard/tester?tab=available', icon: LayoutDashboard })
     links.push({ name: 'My Submissions', href: '/dashboard/tester?tab=submissions', icon: CheckSquare })
     links.push({ name: 'My Earnings', href: '/dashboard/tester?tab=earnings', icon: DollarSign })
+  }
+
+  if (isAdmin || pathname.startsWith('/dashboard/admin')) {
+    links.push({ name: 'Disputes (Admin)', href: '/dashboard/admin/disputes', icon: Scale })
   }
 
   return (
@@ -101,14 +135,19 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
                 scroll={false}
                 onClick={() => onToggle(false)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] ${
-                  isActive 
-                    ? 'bg-[#2955E3] text-white font-semibold' 
-                    : 'text-slate-400 hover:bg-slate-800/40 hover:text-white'
+                className={`group relative flex items-center space-x-3 rounded-lg px-4 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] ${
+                  isActive ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
-                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                <span className="font-medium">{link.name}</span>
+                {isActive && (
+                  <motion.div 
+                    layoutId="activeSidebarPill"
+                    className="absolute inset-0 bg-[#2955E3] rounded-lg shadow-sm"
+                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <Icon className={`relative z-10 h-5 w-5 shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} aria-hidden="true" />
+                <span className={`relative z-10 font-medium transition-colors ${isActive ? 'text-white font-semibold' : 'text-slate-400 group-hover:text-white'}`}>{link.name}</span>
               </Link>
             )
           })}

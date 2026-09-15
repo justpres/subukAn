@@ -31,16 +31,18 @@ export async function GET(request: Request) {
   
   if (next) {
     try {
-      // If 'next' is an absolute URL, verify it has the same origin
+      // If 'next' is an absolute URL, verify it has the exact same origin
       if (next.startsWith('http://') || next.startsWith('https://')) {
         const parsedNext = new URL(next)
         if (parsedNext.origin === requestUrl.origin) {
           safeRedirectUrl = parsedNext
         }
-      } else {
-        // If it's a relative path, ensure it starts with /
-        const cleanPath = next.startsWith('/') ? next : `/${next}`
-        safeRedirectUrl = new URL(cleanPath, requestUrl.origin)
+      } else if (next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\')) {
+        // Relative path: strictly disallow protocol-relative URLs (//) or backslash tricks (/\\)
+        const candidate = new URL(next, requestUrl.origin)
+        if (candidate.origin === requestUrl.origin) {
+          safeRedirectUrl = candidate
+        }
       }
     } catch (e) {
       console.error('Failed to parse redirect URL:', e)

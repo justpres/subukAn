@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { modalBackdropVariants, modalContentVariants } from '@/lib/utils/motion'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -1167,193 +1169,230 @@ export default function SubmissionReviewPage({ params }: PageProps) {
       </div>
 
       {/* Rejection Modal Dialog */}
-      {isRejectModalOpen && mounted && createPortal(
-        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-all animate-fadeIn">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full flex flex-col max-h-[85vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-5 border-b flex justify-between items-center bg-gray-50">
-              <h4 className="font-extrabold text-lg flex items-center gap-2 text-gray-900">
-                <XCircle className="w-5 h-5 text-rose-600" /> Reject Submission Evidence
-              </h4>
-              <button
-                onClick={handleCloseRejectModal}
-                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isRejectModalOpen && (
+            <motion.div 
+              key="reject-modal-backdrop"
+              variants={modalBackdropVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            >
+              <motion.div 
+                key="reject-modal-card"
+                variants={modalContentVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="bg-white rounded-lg shadow-xl max-w-lg w-full flex flex-col max-h-[85vh] overflow-hidden"
               >
-                &times;
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-4">
-              <p className="text-xs text-gray-500 leading-relaxed">
-                Rejecting this submission will lock out the tester&apos;s claim to payment for this slot. Please select a valid reason and provide a detailed explanation.
-              </p>
-
-              {rejectError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-[8px] text-rose-800 text-xs font-semibold flex gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{rejectError}</span>
+                {/* Modal Header */}
+                <div className="p-5 border-b flex justify-between items-center bg-gray-50">
+                  <h4 className="font-extrabold text-lg flex items-center gap-2 text-gray-900">
+                    <XCircle className="w-5 h-5 text-rose-600" /> Reject Submission Evidence
+                  </h4>
+                  <button
+                    onClick={handleCloseRejectModal}
+                    className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                  >
+                    &times;
+                  </button>
                 </div>
-              )}
 
-              {/* Rejection Reason Selector */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-                  Rejection Category (Mandatory)
-                </label>
-                <select
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white"
-                >
-                  <option value="">-- Choose Rejection Reason --</option>
-                  <option value="instructions_not_followed">Instructions not followed</option>
-                  <option value="recording_mismatch">Recording mismatch</option>
-                  <option value="incomplete">Incomplete submission</option>
-                  <option value="low_effort">Low effort / Spam</option>
-                </select>
-              </div>
+                {/* Modal Body */}
+                <div className="p-6 overflow-y-auto space-y-4">
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Rejecting this submission will lock out the tester&apos;s claim to payment for this slot. Please select a valid reason and provide a detailed explanation.
+                  </p>
 
-              {/* Rejection Explanation input */}
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider">
-                    Text Explanation (2-3 Sentences Mandatory)
-                  </label>
-                  <span className={`text-[10px] font-bold ${
-                    rejectionExplanation.trim().length >= 10 && rejectionExplanation.trim().length <= 500
-                      ? 'text-emerald-600'
-                      : 'text-rose-500'
-                  }`}>
-                    {rejectionExplanation.trim().length} / 500 characters
-                  </span>
-                </div>
-                <textarea
-                  value={rejectionExplanation}
-                  onChange={(e) => setRejectionExplanation(e.target.value)}
-                  placeholder="Provide details on what instruction was missed or mismatch identified. E.g. 'The screen recording did not capture the payment checkout. You must show the GCash window and callback screen as requested in the listing instructions. Please submit a new attempt with correct recording.'"
-                  rows={5}
-                  maxLength={500}
-                  className="w-full p-2.5 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white leading-relaxed"
-                />
-                <span className="text-[10px] text-gray-400 block mt-1">
-                  Must be between 10 and 500 characters.
-                </span>
-              </div>
-
-              {/* Rejection Attachment input */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-                  Attach Voice/Video Explanation (Optional)
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="audio/*,video/*"
-                    onChange={(e) => {
-                      setRejectionAttachmentError(null);
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      
-                      if (file.size > 25 * 1024 * 1024) {
-                        setRejectionAttachmentError('File must be under 25MB');
-                        e.target.value = '';
-                        return;
-                      }
-                      
-                      setRejectionAttachment(file);
-                      setRejectionAttachmentPreview(`${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
-                    }}
-                    className="hidden"
-                    id="rejection-attachment-upload"
-                  />
-                  {!rejectionAttachment ? (
-                    <label
-                      htmlFor="rejection-attachment-upload"
-                      className="flex items-center justify-center gap-2 w-full p-2.5 border border-gray-200 border-dashed rounded-[8px] text-sm text-gray-500 hover:bg-gray-50 cursor-pointer bg-white transition-colors"
-                    >
-                      <Paperclip className="w-4 h-4" />
-                      <span>Select Audio or Video File</span>
-                    </label>
-                  ) : (
-                    <div className="flex items-center justify-between p-2.5 border border-gray-200 rounded-[8px] bg-gray-50">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <Paperclip className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                        <span className="text-sm text-gray-700 truncate">{rejectionAttachmentPreview}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRejectionAttachment(null);
-                          setRejectionAttachmentPreview(null);
-                          setRejectionAttachmentError(null);
-                          const input = document.getElementById('rejection-attachment-upload') as HTMLInputElement;
-                          if (input) input.value = '';
-                        }}
-                        className="p-1 hover:bg-gray-200 rounded-full text-gray-500"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                  {rejectError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-[8px] text-rose-800 text-xs font-semibold flex gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{rejectError}</span>
                     </div>
                   )}
-                </div>
-                {rejectionAttachmentError && (
-                  <span className="text-[10px] text-rose-500 font-bold block mt-1">
-                    {rejectionAttachmentError}
-                  </span>
-                )}
-                <span className="text-[10px] text-gray-400 block mt-1">
-                  Max file size: 25MB
-                </span>
-              </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t flex justify-end gap-3 bg-gray-50">
-              <button
-                type="button"
-                onClick={handleCloseRejectModal}
-                disabled={isRejecting}
-                className="px-4 py-2 border border-gray-200 text-gray-700 bg-white hover:bg-gray-100 rounded-[6px] text-sm font-semibold disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRejectSubmission}
-                disabled={isRejecting || !rejectionReason || rejectionExplanation.trim().length < 10 || rejectionExplanation.trim().length > 500}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-[6px] text-sm font-semibold shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {isRejecting ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Rejecting...</>
-                ) : (
-                  'Confirm Rejection'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>,
+                  {/* Rejection Reason Selector */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                      Rejection Category (Mandatory)
+                    </label>
+                    <select
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      className="w-full p-2.5 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white"
+                    >
+                      <option value="">-- Choose Rejection Reason --</option>
+                      <option value="instructions_not_followed">Instructions not followed</option>
+                      <option value="recording_mismatch">Recording mismatch</option>
+                      <option value="incomplete">Incomplete submission</option>
+                      <option value="low_effort">Low effort / Spam</option>
+                    </select>
+                  </div>
+
+                  {/* Rejection Explanation input */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider">
+                        Text Explanation (2-3 Sentences Mandatory)
+                      </label>
+                      <span className={`text-[10px] font-bold ${
+                        rejectionExplanation.trim().length >= 10 && rejectionExplanation.trim().length <= 500
+                          ? 'text-emerald-600'
+                          : 'text-rose-500'
+                      }`}>
+                        {rejectionExplanation.trim().length} / 500 characters
+                      </span>
+                    </div>
+                    <textarea
+                      value={rejectionExplanation}
+                      onChange={(e) => setRejectionExplanation(e.target.value)}
+                      placeholder="Provide details on what instruction was missed or mismatch identified. E.g. 'The screen recording did not capture the payment checkout. You must show the GCash window and callback screen as requested in the listing instructions. Please submit a new attempt with correct recording.'"
+                      rows={5}
+                      maxLength={500}
+                      className="w-full p-2.5 border border-gray-200 rounded-[8px] text-sm focus:outline-none focus:border-blue-500 bg-white leading-relaxed"
+                    />
+                    <span className="text-[10px] text-gray-400 block mt-1">
+                      Must be between 10 and 500 characters.
+                    </span>
+                  </div>
+
+                  {/* Rejection Attachment input */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                      Attach Voice/Video Explanation (Optional)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="audio/*,video/*"
+                        onChange={(e) => {
+                          setRejectionAttachmentError(null);
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          if (file.size > 25 * 1024 * 1024) {
+                            setRejectionAttachmentError('File must be under 25MB');
+                            e.target.value = '';
+                            return;
+                          }
+                          
+                          setRejectionAttachment(file);
+                          setRejectionAttachmentPreview(`${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+                        }}
+                        className="hidden"
+                        id="rejection-attachment-upload"
+                      />
+                      {!rejectionAttachment ? (
+                        <label
+                          htmlFor="rejection-attachment-upload"
+                          className="flex items-center justify-center gap-2 w-full p-2.5 border border-gray-200 border-dashed rounded-[8px] text-sm text-gray-500 hover:bg-gray-50 cursor-pointer bg-white transition-colors"
+                        >
+                          <Paperclip className="w-4 h-4" />
+                          <span>Select Audio or Video File</span>
+                        </label>
+                      ) : (
+                        <div className="flex items-center justify-between p-2.5 border border-gray-200 rounded-[8px] bg-gray-50">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <Paperclip className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            <span className="text-sm text-gray-700 truncate">{rejectionAttachmentPreview}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRejectionAttachment(null);
+                              setRejectionAttachmentPreview(null);
+                              setRejectionAttachmentError(null);
+                              const input = document.getElementById('rejection-attachment-upload') as HTMLInputElement;
+                              if (input) input.value = '';
+                            }}
+                            className="p-1 hover:bg-gray-200 rounded-full text-gray-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {rejectionAttachmentError && (
+                      <span className="text-[10px] text-rose-500 font-bold block mt-1">
+                        {rejectionAttachmentError}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-gray-400 block mt-1">
+                      Max file size: 25MB
+                    </span>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCloseRejectModal}
+                    className="px-4 py-2 border border-gray-200 text-gray-700 rounded-[6px] text-sm font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRejectSubmission}
+                    disabled={isRejecting || !rejectionReason || rejectionExplanation.trim().length < 10 || rejectionExplanation.trim().length > 500}
+                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-[6px] text-sm font-semibold shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isRejecting ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Rejecting...</>
+                    ) : (
+                      'Confirm Rejection'
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
 
       {/* Screenshot Lightbox Modal */}
-      {lightboxUrl && mounted && createPortal(
-        <div className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-4 cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
-          <div className="relative max-w-5xl max-h-[90vh] flex flex-col justify-center items-center" onClick={(e) => e.stopPropagation()}>
-            <button
+      {mounted && createPortal(
+        <AnimatePresence>
+          {lightboxUrl && (
+            <motion.div 
+              key="lightbox-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-slate-950/90 z-[100] flex items-center justify-center p-4 cursor-zoom-out" 
               onClick={() => setLightboxUrl(null)}
-              className="absolute -top-12 right-0 text-white hover:text-gray-300 font-semibold text-sm flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
             >
-              <X className="w-4 h-4" /> Close Zoom
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightboxUrl}
-              alt="Enlarged evidence screenshot"
-              className="max-w-full max-h-[80vh] rounded-lg object-contain shadow-2xl"
-            />
-          </div>
-        </div>,
+              <motion.div 
+                key="lightbox-card"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.92 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                className="relative max-w-5xl max-h-[90vh] flex flex-col justify-center items-center" 
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setLightboxUrl(null)}
+                  className="absolute -top-12 right-0 text-white hover:text-gray-300 font-semibold text-sm flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" /> Close Zoom
+                </button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={lightboxUrl}
+                  alt="Enlarged evidence screenshot"
+                  className="max-w-full max-h-[80vh] rounded-lg object-contain shadow-2xl"
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
     </div>

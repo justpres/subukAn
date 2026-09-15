@@ -54,19 +54,19 @@ interface TaskResponseState {
   image_url?: string | null;
 }
 
-const NDA_CONTENT = `subukAn Tester Agreement
+const NDA_CONTENT = `subukAn Tester Non-Disclosure & Privacy Agreement
 
-By participating in this test, you agree to the following rules:
+By claiming and participating in this test, you legally agree to the following terms:
 
-1. DO YOUR BEST WORK: Follow each instruction step carefully and provide genuine, helpful feedback. Spam or fake submissions will be rejected.
+1. STRICT CONFIDENTIALITY (NDA): The product, staging URLs, prototypes, and features being tested are confidential. You agree NOT to share screenshots, screen recordings, leaks, or discussions about this test outside subukAn.
 
-2. KEEP IT PRIVATE: The app being tested is confidential. Do not share screenshots, videos, or information about this test outside subukAn.
+2. SENSITIVE DATA PRECAUTION (NPC): During screen and microphone recording, NEVER type or expose real passwords, credit card numbers, OTPs, or private chat messages. Close personal tabs and messaging apps prior to recording.
 
-3. SCREEN RECORDING: If a step requires recording, keep screen recording active during that step to show what you did.
+3. QUALITY & GENUINE EFFORT: Complete all steps diligently and provide genuine, constructive feedback. Spam, automated, or fake submissions will be rejected.
 
-4. SAFE PAYOUTS: The creator reviews your submission within 30 to 60 minutes. Once approved (or if the timer runs out), your reward is sent directly to your GCash.
+4. GUARANTEED GCASH PAYOUTS: The campaign creator reviews your submission within 72 hours. Once approved (or if the 72-hour review window expires), your payout is automatically credited to your Withdrawable Earnings.
 
-Scroll down and review all terms to accept.`;
+Scroll down completely to accept and begin testing.`;
 
 export default function TaskWorkspacePage() {
   const params = useParams();

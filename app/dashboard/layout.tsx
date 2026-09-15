@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/10 blur-[120px] pointer-events-none z-0" />
       
       <DashboardSidebar 
-        role={role} 
+        role={pathname.startsWith('/dashboard/tester') ? 'tester' : pathname.startsWith('/dashboard/poster') ? 'poster' : role} 
         isOpen={isSidebarOpen} 
         onToggle={setIsSidebarOpen} 
       />

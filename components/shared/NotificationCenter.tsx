@@ -13,6 +13,7 @@ import {
   ShieldAlert, 
   ExternalLink 
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { Notification } from '@/types'
 
@@ -256,7 +257,7 @@ export function NotificationCenter() {
         aria-label="Open notifications"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] focus:ring-0 animate-bell-wiggle"
+        className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] focus:ring-0"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
@@ -267,106 +268,113 @@ export function NotificationCenter() {
       </button>
 
       {/* Popover Flyout Overlay & Container */}
-      {isOpen && (
-        <>
-          {/* Backdrop click-away overlay */}
-          <div 
-            className="fixed inset-0 z-40 bg-transparent" 
-            onClick={() => setIsOpen(false)} 
-          />
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop click-away overlay */}
+            <div 
+              className="fixed inset-0 z-40 bg-transparent" 
+              onClick={() => setIsOpen(false)} 
+            />
 
-          {/* Popover Container */}
-          <div 
-            role="region"
-            aria-label="Notifications Panel"
-            className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] sm:w-96 max-h-[480px] bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden animate-fadeIn"
-          >
-            {/* Header: Clean layout with title, new badge, mark all read, and single X close */}
-            <div className="p-3.5 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm text-slate-900">Notifications</h3>
-                {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700">
-                    {unreadCount} new
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
+            {/* Popover Container */}
+            <motion.div 
+              key="notification-popover"
+              initial={{ opacity: 0, scale: 0.95, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -8 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              role="region"
+              aria-label="Notifications Panel"
+              className="absolute right-0 mt-2 z-50 w-[calc(100vw-2rem)] sm:w-96 max-h-[480px] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
+            >
+              {/* Header */}
+              <div className="p-3.5 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-slate-900">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleMarkAllAsRead}
+                      aria-label="Mark all notifications as read"
+                      className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded-xs"
+                    >
+                      <Check className="w-3.5 h-3.5" aria-hidden="true" /> Mark all read
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={handleMarkAllAsRead}
-                    aria-label="Mark all notifications as read"
-                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded-xs"
+                    onClick={() => setIsOpen(false)}
+                    aria-label="Close notifications panel"
+                    className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/50 transition-colors ml-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
                   >
-                    <Check className="w-3.5 h-3.5" aria-hidden="true" /> Mark all read
+                    <X className="w-4 h-4" aria-hidden="true" />
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  aria-label="Close notifications panel"
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/50 transition-colors ml-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
-                >
-                  <X className="w-4 h-4" aria-hidden="true" />
-                </button>
+                </div>
               </div>
-            </div>
 
-            {/* Notification List */}
-            <div className="overflow-y-auto divide-y divide-slate-100 flex-1 overscroll-contain">
-              {loading ? (
-                <div className="p-8 text-center text-xs text-slate-400 font-mono">
-                  Loading updates...
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="p-8 text-center space-y-2">
-                  <Bell className="w-8 h-8 text-slate-300 mx-auto" />
-                  <p className="text-xs font-bold text-slate-700">No notifications yet</p>
-                  <p className="text-[11px] text-slate-500 leading-normal max-w-xs mx-auto">
-                    Updates regarding payouts, submissions, and alerts will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col">
-                  {todayNotifs.length > 0 && (
-                    <div className="flex flex-col">
-                      <div className="bg-slate-50/70 px-4 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 select-none">
-                        TODAY
+              {/* Notification List */}
+              <div className="overflow-y-auto divide-y divide-slate-100 flex-1 overscroll-contain">
+                {loading ? (
+                  <div className="p-8 text-center text-xs text-slate-400 font-mono">
+                    Loading updates...
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="p-8 text-center space-y-2">
+                    <Bell className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700">No notifications yet</p>
+                    <p className="text-[11px] text-slate-500 leading-normal max-w-xs mx-auto">
+                      Updates regarding payouts, submissions, and alerts will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {todayNotifs.length > 0 && (
+                      <div className="flex flex-col">
+                        <div className="bg-slate-50/70 px-4 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 select-none">
+                          TODAY
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                          {todayNotifs.map(renderNotificationItem)}
+                        </div>
                       </div>
-                      <div className="divide-y divide-slate-100">
-                        {todayNotifs.map(renderNotificationItem)}
+                    )}
+                    {earlierNotifs.length > 0 && (
+                      <div className="flex flex-col">
+                        <div className="bg-slate-50/70 px-4 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-y border-slate-100 select-none">
+                          EARLIER
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                          {earlierNotifs.map(renderNotificationItem)}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {earlierNotifs.length > 0 && (
-                    <div className="flex flex-col">
-                      <div className="bg-slate-50/70 px-4 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-y border-slate-100 select-none">
-                        EARLIER
-                      </div>
-                      <div className="divide-y divide-slate-100">
-                        {earlierNotifs.map(renderNotificationItem)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
-            {/* Footer */}
-            <div className="p-3 bg-slate-50/90 border-t border-slate-200 text-center shrink-0">
-              <a
-                href={getFooterHref()}
-                onClick={() => setIsOpen(false)}
-                className="text-xs font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors inline-flex items-center gap-1"
-              >
-                See all notifications →
-              </a>
-            </div>
-          </div>
-        </>
-      )}
+              {/* Footer */}
+              <div className="p-3 bg-slate-50/90 border-t border-slate-200 text-center shrink-0">
+                <a
+                  href={getFooterHref()}
+                  onClick={() => setIsOpen(false)}
+                  className="text-xs font-semibold text-[#2955E3] hover:text-[#1D4ED8] transition-colors inline-flex items-center gap-1"
+                >
+                  See all notifications →
+                </a>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

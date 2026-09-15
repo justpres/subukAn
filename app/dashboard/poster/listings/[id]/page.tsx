@@ -346,7 +346,7 @@ export default function ListingDetailsPage({ params }: PageProps) {
       {/* Top Banner Navigation */}
       <div className="bg-white border-b border-gray-200 py-6">
         <div className="max-w-6xl mx-auto px-6">
-          <Link href="/dashboard/poster" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-955 mb-4 transition-colors">
+          <Link href="/dashboard/poster" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 mb-4 transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
           </Link>
 
@@ -354,8 +354,7 @@ export default function ListingDetailsPage({ params }: PageProps) {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">{listing.title}</h1>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono uppercase">
                   {listing.status}
                 </span>
               </div>
@@ -648,8 +647,7 @@ export default function ListingDetailsPage({ params }: PageProps) {
                         <h3 className="font-extrabold text-lg text-gray-900">{v.title}</h3>
                         <span className="text-[10px] text-gray-400 font-mono truncate block max-w-xs">{v.url}</span>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100/90 text-slate-700 text-xs font-semibold border border-slate-200/80 shadow-2xs font-mono">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-slate-100/90 text-slate-700 text-xs font-semibold border border-slate-200/80 shadow-2xs font-mono">
                         Weight: {v.weight}%
                       </span>
                     </div>
