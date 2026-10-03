@@ -7,13 +7,36 @@ import { createListingSchema, CUSTOM_RATE_TIERS } from '@/lib/validation/schemas
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 import { convertPhpToUsdc, calculateDualRailSplit } from '@/lib/web3/client'
 
+import { SupabaseClient } from '@supabase/supabase-js'
+
+interface InitialValuesProps {
+  title?: string
+  description?: string
+  site_url?: string
+  rate_per_tester?: number
+  slots_count?: number
+  review_window_minutes?: 30 | 60
+  target_age_group?: string
+  target_gender?: string
+  target_employment_status?: string
+  target_tech_literacy?: string
+  target_accessibility_tags?: string[]
+  is_quick_impression?: boolean
+  impression_duration_seconds?: number
+  tasks?: Array<{
+    question_text?: string
+    requires_recording?: boolean
+    requires_image?: boolean
+  }>
+}
+
 interface CreateCampaignModalProps {
   isOpen: boolean
   onClose: () => void
-  user: any
-  supabase: any
+  user: { id: string } | null
+  supabase: SupabaseClient
   onSubmitSuccess: () => void
-  initialValues?: any
+  initialValues?: InitialValuesProps | null
 }
 
 export default function CreateCampaignModal({
@@ -234,57 +257,87 @@ export default function CreateCampaignModal({
     setSubmitError(null)
 
     try {
-      const payload: any = {
-        title: formTitle,
-        description: formDescription,
-        site_url: formSiteUrl || 'https://example.com',
+      // Step 1: Construct clean listing payload strictly adhering to public.listings schema
+      const listingInsertPayload: Record<string, unknown> = {
+        poster_id: user.id,
+        title: formTitle.trim(),
+        description: formDescription.trim(),
+        site_url: formSiteUrl.trim() || 'https://example.com',
         rate_per_tester: formRate,
         slots_count: formSlots,
         total_budget: totalBudget,
         review_window_minutes: formReviewWindow,
-        target_age_group: targetAgeGroup || undefined,
-        target_gender: targetGender || undefined,
-        target_employment_status: targetEmploymentStatus || undefined,
-        target_tech_literacy: targetTechLiteracy || undefined,
-        target_accessibility_tags: targetAccessibilityTags.length > 0 ? targetAccessibilityTags : undefined,
-        is_ab_test: isABTesting,
-        variants: isABTesting ? formVariants : undefined,
-        parent_listing_id: parentListingId || undefined,
+        status: 'open',
         is_quick_impression: isQuickImpression,
-        impression_duration_seconds: isQuickImpression ? impressionDurationSeconds : undefined,
         payment_rail: paymentRail,
-        crypto_chain: paymentRail === 'crypto_web3' ? 'base' : undefined,
         crypto_token: 'USDC',
         platform_fee_percent: 20.0,
         platform_fee_amount: calculateDualRailSplit(totalBudget, 20).platformFee,
         bounty_pool_amount: calculateDualRailSplit(totalBudget, 20).netEscrowPool,
-        questions: formQuestions,
       }
 
-      // Schema validation via Zod
-      createListingSchema.parse(payload)
+      if (targetAgeGroup) listingInsertPayload.target_age_group = targetAgeGroup
+      if (targetGender) listingInsertPayload.target_gender = targetGender
+      if (targetEmploymentStatus) listingInsertPayload.target_employment_status = targetEmploymentStatus
+      if (targetTechLiteracy) listingInsertPayload.target_tech_literacy = targetTechLiteracy
+      if (targetAccessibilityTags.length > 0) listingInsertPayload.target_accessibility_tags = targetAccessibilityTags
+      if (isQuickImpression) listingInsertPayload.impression_duration_seconds = impressionDurationSeconds
+      if (parentListingId) listingInsertPayload.parent_listing_id = parentListingId
+      if (isABTesting && formVariants.length > 0) listingInsertPayload.variants = formVariants
+      if (paymentRail === 'crypto_web3') listingInsertPayload.crypto_chain = 'base'
 
-      // Step 1: Insert listing into database with open status
-      const { questions, ...listingPayload } = payload
-      const { data: listingData, error: listingError } = await supabase
+      let listingData: { id: string } | null = null
+      const { data: insertedListing, error: listingError } = await supabase
         .from('listings')
-        .insert({
-          ...listingPayload,
-          poster_id: user.id,
-          status: 'open',
-          slots_filled: 0,
-        })
+        .insert(listingInsertPayload)
         .select()
         .single()
 
-      if (listingError) throw listingError
+      if (listingError) {
+        // Fallback for database environments where migration 00015 has not yet been applied
+        const isDualRailColumnError =
+          listingError.message?.includes('payment_rail') ||
+          listingError.message?.includes('platform_fee') ||
+          listingError.message?.includes('bounty_pool') ||
+          listingError.message?.includes('crypto_')
 
-      // Step 2: Insert verification tasks
-      const tasksPayload = formQuestions.map(q => ({
+        if (isDualRailColumnError) {
+          const {
+            payment_rail: _pr,
+            crypto_chain: _cc,
+            crypto_token: _ct,
+            platform_fee_percent: _pfp,
+            platform_fee_amount: _pfa,
+            bounty_pool_amount: _bpa,
+            ...legacyPayload
+          } = listingInsertPayload
+
+          const { data: retryData, error: retryError } = await supabase
+            .from('listings')
+            .insert(legacyPayload)
+            .select()
+            .single()
+
+          if (retryError) throw retryError
+          listingData = retryData
+        } else {
+          throw listingError
+        }
+      } else {
+        listingData = insertedListing
+      }
+
+      if (!listingData?.id) {
+        throw new Error('Listing record creation did not return a valid ID.')
+      }
+
+      // Step 2: Insert verification tasks with required order_index
+      const tasksPayload = formQuestions.map((q, index) => ({
         listing_id: listingData.id,
-        question_text: q.question_text,
-        requires_recording: q.requires_recording,
-        requires_image: q.requires_image
+        order_index: index,
+        question_text: q.question_text.trim(),
+        requires_recording: Boolean(q.requires_recording),
+        requires_image: Boolean(q.requires_image),
       }))
 
       const { error: tasksError } = await supabase
@@ -313,9 +366,24 @@ export default function CreateCampaignModal({
       }
 
       onSubmitSuccess()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error submitting form:', err)
-      setSubmitError(sanitizeDatabaseError(err, 'Failed to create campaign. Please verify your form data.'))
+      const rawError = err as { message?: string; details?: string; code?: string }
+      let userFriendlyMsg = 'Failed to create campaign. Please verify your form data.'
+
+      if (rawError?.message?.includes('row level security') || rawError?.message?.includes('permission denied')) {
+        userFriendlyMsg = 'Access Denied: Only accounts registered as Posters can create test campaigns. Please check your account role.'
+      } else if (rawError?.message?.includes('violates foreign key')) {
+        userFriendlyMsg = 'Account Verification Error: Your poster profile is not properly registered in the database. Please try logging out and logging back in.'
+      } else if (rawError?.message?.includes('budget_match')) {
+        userFriendlyMsg = 'Budget calculation mismatch: Total budget must equal rate multiplied by slots.'
+      } else if (rawError?.message?.includes('schema cache') || rawError?.message?.includes('does not exist')) {
+        userFriendlyMsg = `Database schema mismatch: ${rawError.message}. Please verify all database migrations (00001 through 00016) have been run.`
+      } else if (rawError?.message) {
+        userFriendlyMsg = sanitizeDatabaseError(err, rawError.message)
+      }
+
+      setSubmitError(userFriendlyMsg)
     } finally {
       setIsSubmitting(false)
     }

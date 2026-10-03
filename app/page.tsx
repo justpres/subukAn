@@ -67,13 +67,22 @@ export default function Home() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, rate_per_tester, slots_count, slots_filled, status')
+          .select('id, title, description, rate_per_tester, slots_count, status, submissions(id, status)')
           .eq('status', 'open')
           .order('created_at', { ascending: false })
           .limit(6)
 
         if (data && data.length > 0) {
-          setListings(data)
+          const mapped: ListingFeedItem[] = data.map((l: { id: string; title: string; description: string | null; rate_per_tester: number; slots_count: number; status: string; submissions?: Array<{ id: string; status: string }> }) => ({
+            id: l.id,
+            title: l.title,
+            description: l.description,
+            rate_per_tester: l.rate_per_tester,
+            slots_count: l.slots_count,
+            slots_filled: l.submissions ? l.submissions.filter((s: { status: string }) => s.status === 'approved' || s.status === 'pending_review').length : 0,
+            status: l.status,
+          }))
+          setListings(mapped)
         }
       } catch (err) {
         console.error('Failed to fetch open listings:', err)
