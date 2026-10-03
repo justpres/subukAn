@@ -17,7 +17,9 @@ import {
   Info,
   Send,
   Zap,
-  FileText
+  FileText,
+  Maximize2,
+  Minimize2
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { AgreementModal } from '@/components/shared/AgreementModal'
@@ -113,6 +115,48 @@ export default function FiveSecondTestWorkspace() {
 
   // Overall workspace listing time limit countdown
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  // Fullscreen Mode State & Handlers
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (typeof document !== 'undefined') {
+        setIsFullscreen(Boolean(document.fullscreenElement));
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const enterFullscreen = () => {
+    if (typeof document !== 'undefined') {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {});
+      } else if ((elem as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen) {
+        (elem as unknown as { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
+      }
+    }
+  };
+
+  const exitFullscreenSafely = () => {
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (typeof document !== 'undefined') {
+      if (document.fullscreenElement) {
+        exitFullscreenSafely();
+      } else {
+        enterFullscreen();
+      }
+    }
+  };
 
   // Post-Test Threading / Comments
   const [comments, setComments] = useState<any[]>([]);
@@ -502,6 +546,7 @@ export default function FiveSecondTestWorkspace() {
 
   // NDA modal handlers
   const handleAcceptAgreement = async () => {
+    enterFullscreen();
     if (submission) {
       setCurrentStep('cover');
       return;
@@ -545,7 +590,7 @@ export default function FiveSecondTestWorkspace() {
 
       setSubmission(newSubmission);
       setCurrentStep('cover');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to claim slot on agreement acceptance:', err);
       setError(sanitizeDatabaseError(err, 'Failed to claim slot. Please try again.'));
       setCurrentStep('error');
@@ -555,6 +600,7 @@ export default function FiveSecondTestWorkspace() {
   };
 
   const handleDeclineAgreement = async () => {
+    exitFullscreenSafely();
     if (submission) {
       try {
         await supabase
@@ -565,7 +611,7 @@ export default function FiveSecondTestWorkspace() {
         console.error(e);
       }
     }
-    router.push('/dashboard/tester');
+    router.push('/dashboard/tester', { scroll: false });
   };
 
   // Forfeit/Release slot manually
@@ -778,7 +824,7 @@ export default function FiveSecondTestWorkspace() {
           <p className="text-sm text-gray-500">
             Only verified users with the Tester role are permitted to view active workspaces.
           </p>
-          <Link href="/dashboard" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
+          <Link href="/dashboard/tester" scroll={false} onClick={exitFullscreenSafely} className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
             Back to Dashboard
           </Link>
         </div>
@@ -795,7 +841,7 @@ export default function FiveSecondTestWorkspace() {
           </div>
           <h2 className="text-xl font-bold text-gray-900">Workspace Error</h2>
           <p className="text-sm text-gray-500">{error || 'An unexpected error occurred.'}</p>
-          <Link href="/dashboard/tester" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
+          <Link href="/dashboard/tester" scroll={false} onClick={exitFullscreenSafely} className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
             Return to tasks
           </Link>
         </div>
@@ -805,7 +851,17 @@ export default function FiveSecondTestWorkspace() {
 
   if (['submitted', 'pending_review', 'approved', 'rejected'].includes(currentStep) && listing) {
     return (
-      <div className="min-h-screen bg-[#fcfcfc] py-12 px-6">
+      <div className="min-h-screen bg-[#fcfcfc] py-8 px-6">
+        <div className="max-w-4xl mx-auto mb-6">
+          <Link
+            href="/dashboard/tester"
+            scroll={false}
+            onClick={exitFullscreenSafely}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs hover:bg-slate-50 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Tester Hub
+          </Link>
+        </div>
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Status card (Left column, 1/3 width) */}
           <div className="md:col-span-1 space-y-6">
@@ -906,7 +962,7 @@ export default function FiveSecondTestWorkspace() {
           <p className="text-sm text-gray-500">
             The allotted testing time has elapsed and the slot has been automatically released.
           </p>
-          <Link href="/dashboard/tester" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
+          <Link href="/dashboard/tester" scroll={false} onClick={exitFullscreenSafely} className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-[8px]">
             Return to Dashboard
           </Link>
         </div>
@@ -920,6 +976,7 @@ export default function FiveSecondTestWorkspace() {
       <AgreementModal
         title={`Acknowledge Testing Guidelines: ${listing.title}`}
         content={NDA_CONTENT}
+        acceptLabel="Accept & Start Test (Fullscreen)"
         onAccept={handleAcceptAgreement}
         onDecline={handleDeclineAgreement}
       />
@@ -929,24 +986,55 @@ export default function FiveSecondTestWorkspace() {
   // 1. Cover Page Step
   if (currentStep === 'cover' && listing) {
     return (
-      <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] pb-16">
-        {secondsLeft !== null && secondsLeft > 0 && (
-          <TimerDisplay 
-            initialSeconds={secondsLeft} 
-            onExpire={handleAutoSubmitOrExpire} 
-          />
-        )}
+      <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] pb-16 flex flex-col">
+        {/* Test Runner Top Control Bar */}
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-200/80 px-4 sm:px-6 py-2.5 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={handleForfeitSlot}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Forfeit Slot & Exit
+            </button>
+            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-200 text-xs font-mono font-medium text-slate-500">
+              <span>Rate: <strong className="text-slate-900 font-semibold">₱{listing.rate_per_tester.toFixed(2)}</strong></span>
+              <span>•</span>
+              <span>Slots: <strong className="text-slate-900 font-semibold">{listing.slots_count}</strong></span>
+            </div>
+          </div>
 
-        <div className="max-w-3xl mx-auto px-6 pt-6">
-          <button 
-            onClick={handleForfeitSlot}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 bg-white border px-3 py-1.5 rounded-[8px] transition-all"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Forfeit Slot & Exit
-          </button>
+          {/* Center: Countdown Timer */}
+          {secondsLeft !== null && secondsLeft > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-md font-mono text-xs font-bold text-amber-900">
+              <Clock className="w-3.5 h-3.5 text-amber-700 animate-pulse" />
+              <span>Time Remaining: {Math.floor(secondsLeft / 60).toString().padStart(2, '0')}:{(secondsLeft % 60).toString().padStart(2, '0')}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
+            >
+              {isFullscreen ? (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-600" />
+                  <span className="hidden sm:inline">Exit Fullscreen</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
+                  <span className="hidden sm:inline">Fullscreen</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        <div className="max-w-3xl mx-auto px-6 mt-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6 w-full flex-1">
           <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-sm relative">
             <DynamicWatermark testerId={submission?.tester_id} />
             <EscrowStatusBar 
@@ -1128,24 +1216,55 @@ export default function FiveSecondTestWorkspace() {
   // 3. Questionnaire responses collection step
   if (currentStep === 'questionnaire' && listing) {
     return (
-      <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] pb-16">
-        {secondsLeft !== null && secondsLeft > 0 && (
-          <TimerDisplay 
-            initialSeconds={secondsLeft} 
-            onExpire={handleAutoSubmitOrExpire} 
-          />
-        )}
+      <div className="min-h-screen bg-[#fcfcfc] text-[#1a1a1a] pb-16 flex flex-col">
+        {/* Test Runner Top Control Bar */}
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-200/80 px-4 sm:px-6 py-2.5 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={handleForfeitSlot}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Forfeit Slot & Exit
+            </button>
+            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-200 text-xs font-mono font-medium text-slate-500">
+              <span>Rate: <strong className="text-slate-900 font-semibold">₱{listing.rate_per_tester.toFixed(2)}</strong></span>
+              <span>•</span>
+              <span>Slots: <strong className="text-slate-900 font-semibold">{listing.slots_count}</strong></span>
+            </div>
+          </div>
 
-        <div className="max-w-4xl mx-auto px-6 pt-6">
-          <button 
-            onClick={handleForfeitSlot}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 bg-white border px-3 py-1.5 rounded-[8px] transition-all"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Forfeit Slot & Exit
-          </button>
+          {/* Center: Countdown Timer */}
+          {secondsLeft !== null && secondsLeft > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-md font-mono text-xs font-bold text-amber-900">
+              <Clock className="w-3.5 h-3.5 text-amber-700 animate-pulse" />
+              <span>Time Remaining: {Math.floor(secondsLeft / 60).toString().padStart(2, '0')}:{(secondsLeft % 60).toString().padStart(2, '0')}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
+            >
+              {isFullscreen ? (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-600" />
+                  <span className="hidden sm:inline">Exit Fullscreen</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
+                  <span className="hidden sm:inline">Fullscreen</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-6 mt-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6 w-full flex-1">
           <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-sm flex flex-col">
             <EscrowStatusBar 
               budget={listing.rate_per_tester} 

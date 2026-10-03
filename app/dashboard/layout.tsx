@@ -52,6 +52,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     : 'Dashboard'
 
   const isGatePage = pathname === '/dashboard'
+  const isTaskWorkspace = pathname.includes('/dashboard/tester/tasks/')
+
+  const outerRef = React.useRef<HTMLDivElement>(null)
+  const contentColRef = React.useRef<HTMLDivElement>(null)
+
+  // Reset scroll and container offsets whenever pathname changes to prevent header disappearance
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0)
+    }
+    if (outerRef.current) {
+      outerRef.current.scrollTop = 0
+      outerRef.current.scrollLeft = 0
+    }
+    if (contentColRef.current) {
+      contentColRef.current.scrollTop = 0
+      contentColRef.current.scrollLeft = 0
+    }
+  }, [pathname])
 
   if (isGatePage) {
     return <div className="min-h-screen bg-canvas">{children}</div>
@@ -65,7 +84,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
   return (
-    <div className="fixed inset-0 flex h-full w-full overflow-hidden bg-canvas">
+    <div 
+      ref={outerRef}
+      onScroll={(e) => {
+        if (e.currentTarget.scrollTop !== 0) e.currentTarget.scrollTop = 0
+        if (e.currentTarget.scrollLeft !== 0) e.currentTarget.scrollLeft = 0
+      }}
+      className="fixed inset-0 flex h-full w-full overflow-hidden bg-canvas"
+    >
       {/* Skip to Main Content Link (WCAG 2.4.1) */}
       <a 
         href="#main-content" 
@@ -74,46 +100,69 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         Skip to main content
       </a>
 
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/15 blur-[120px] pointer-events-none z-0" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/10 blur-[120px] pointer-events-none z-0" />
+      {!isTaskWorkspace && (
+        <>
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/15 blur-[120px] pointer-events-none z-0" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/10 blur-[120px] pointer-events-none z-0" />
+        </>
+      )}
       
-      <DashboardSidebar 
-        role={pathname.startsWith('/dashboard/tester') ? 'tester' : pathname.startsWith('/dashboard/poster') ? 'poster' : role} 
-        isOpen={isSidebarOpen} 
-        onToggle={setIsSidebarOpen} 
-      />
+      {!isTaskWorkspace && (
+        <DashboardSidebar 
+          role={pathname.startsWith('/dashboard/tester') ? 'tester' : pathname.startsWith('/dashboard/poster') ? 'poster' : role} 
+          isOpen={isSidebarOpen} 
+          onToggle={setIsSidebarOpen} 
+        />
+      )}
       
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <ErrorBoundary fallback={
-          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 relative shrink-0">
-            <div className="flex items-center gap-3">
-              <span className="text-xl font-bold text-slate-800 font-poppins">subukAn</span>
-            </div>
-            <div className="text-xs text-slate-400 font-mono">Header suspended</div>
-          </header>
-        }>
-          <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 relative shrink-0">
-            <div className="flex items-center gap-3">
-              <button 
-                type="button"
-                onClick={() => setIsSidebarOpen(true)}
-                aria-label="Open navigation sidebar"
-                aria-expanded={isSidebarOpen}
-                className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] rounded-md transition-colors"
-              >
-                <Menu className="h-6 w-6" aria-hidden="true" />
-              </button>
-              <DashboardBreadcrumbs />
-            </div>
+      <div 
+        ref={contentColRef}
+        onScroll={(e) => {
+          if (e.currentTarget.scrollTop !== 0) e.currentTarget.scrollTop = 0
+          if (e.currentTarget.scrollLeft !== 0) e.currentTarget.scrollLeft = 0
+        }}
+        className="flex-1 flex flex-col min-w-0 h-full overflow-hidden"
+      >
+        {!isTaskWorkspace && (
+          <ErrorBoundary fallback={
+            <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 relative shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="text-xl font-bold text-slate-800 font-poppins">subukAn</span>
+              </div>
+              <div className="text-xs text-slate-400 font-mono">Header suspended</div>
+            </header>
+          }>
+            <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200/80 relative shrink-0">
+              <div className="flex items-center gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsSidebarOpen(true)}
+                  aria-label="Open navigation sidebar"
+                  aria-expanded={isSidebarOpen}
+                  className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3] rounded-md transition-colors"
+                >
+                  <Menu className="h-6 w-6" aria-hidden="true" />
+                </button>
+                <DashboardBreadcrumbs />
+              </div>
 
-            <div className="flex items-center gap-3">
-              <NotificationCenter />
-            </div>
-          </header>
-        </ErrorBoundary>
+              <div className="flex items-center gap-3">
+                <NotificationCenter />
+              </div>
+            </header>
+          </ErrorBoundary>
+        )}
 
-        <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-h-0 focus:outline-none">
-          <div className="max-w-7xl mx-auto">
+        <main 
+          id="main-content" 
+          tabIndex={-1} 
+          className={
+            isTaskWorkspace 
+              ? "flex-1 overflow-y-auto min-h-0 focus:outline-none w-full h-full" 
+              : "flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-h-0 focus:outline-none"
+          }
+        >
+          <div className={isTaskWorkspace ? "w-full h-full" : "max-w-7xl mx-auto"}>
             {children}
           </div>
         </main>

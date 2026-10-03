@@ -4,15 +4,17 @@ import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { modalBackdropVariants, modalContentVariants } from '@/lib/utils/motion'
+import { Maximize2 } from 'lucide-react'
 
 interface AgreementModalProps {
   title: string;
   content: string;
   onAccept: () => void;
   onDecline: () => void;
+  acceptLabel?: string;
 }
 
-export function AgreementModal({ title, content, onAccept, onDecline }: AgreementModalProps) {
+export function AgreementModal({ title, content, onAccept, onDecline, acceptLabel }: AgreementModalProps) {
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const [mounted, setMounted] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -81,11 +83,17 @@ export function AgreementModal({ title, content, onAccept, onDecline }: Agreemen
             </button>
             <button 
               type="button"
-              onClick={onAccept}
+              onClick={() => {
+                if (typeof document !== 'undefined' && document.documentElement?.requestFullscreen) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                }
+                onAccept();
+              }}
               disabled={!isScrolledToBottom}
-              className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 font-semibold text-sm transition-all"
+              className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 font-semibold text-sm transition-all inline-flex items-center gap-1.5"
             >
-              Accept
+              <Maximize2 className="w-4 h-4" />
+              <span>{acceptLabel || 'Accept & Start Test (Fullscreen)'}</span>
             </button>
           </div>
         </motion.div>
