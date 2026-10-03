@@ -1,14 +1,45 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { AlertCircle, ArrowRight } from 'lucide-react'
+
+function humanizeSignInError(msg: string): string {
+  if (msg.includes('Invalid path specified in request URL') || msg.includes('PGRST125')) {
+    return 'Invalid Supabase URL configuration: NEXT_PUBLIC_SUPABASE_URL must be the base project URL (https://your-project.supabase.co) without /rest/v1 or trailing paths.'
+  }
+  if (msg.includes('fetch failed') || msg.includes('Failed to fetch')) {
+    return 'Unable to connect to the authentication server. Please check your internet connection or verify the server is running.'
+  }
+  if (msg.includes('Invalid login credentials')) {
+    return 'Invalid email or password. Please verify your credentials and try again.'
+  }
+  return msg
+}
 
 export default function LoginPage() {
   const [loading, setLoading] = useState<'google' | 'github' | 'credentials' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search)
+      const queryErr = searchParams.get('error_description') || searchParams.get('error')
+      if (queryErr) {
+        setError(humanizeSignInError(decodeURIComponent(queryErr)))
+        return
+      }
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const hashErr = hashParams.get('error_description') || hashParams.get('error')
+        if (hashErr) {
+          setError(humanizeSignInError(decodeURIComponent(hashErr)))
+        }
+      }
+    }
+  }, [])
 
   const handleOAuthSignIn = async (provider: 'google' | 'github') => {
     setLoading(provider)
@@ -36,12 +67,12 @@ export default function LoginPage() {
       })
 
       if (signInError) {
-        setError(signInError.message)
+        setError(humanizeSignInError(signInError.message))
         setLoading(null)
       }
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'An unexpected error occurred during sign in.'
-      setError(errMsg)
+      const rawMsg = err instanceof Error ? err.message : 'An unexpected error occurred during sign in.'
+      setError(humanizeSignInError(rawMsg))
       setLoading(null)
     }
   }
@@ -59,7 +90,7 @@ export default function LoginPage() {
       })
 
       if (signInError) {
-        setError(signInError.message)
+        setError(humanizeSignInError(signInError.message))
         setLoading(null)
       } else {
         let redirectTo = '/dashboard'
@@ -76,8 +107,8 @@ export default function LoginPage() {
         window.location.href = redirectTo
       }
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'An unexpected error occurred during sign in.'
-      setError(errMsg)
+      const rawMsg = err instanceof Error ? err.message : 'An unexpected error occurred during sign in.'
+      setError(humanizeSignInError(rawMsg))
       setLoading(null)
     }
   }

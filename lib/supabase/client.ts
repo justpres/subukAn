@@ -1,9 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { getSupabaseUrl, getSupabaseAnonKey } from './config'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-let supabaseInstance: SupabaseClient<any> | null = null
+let supabaseInstance: SupabaseClient | null = null
 
 // Custom browser cookie storage helper for Supabase Auth
 const cookieStorage = {
@@ -40,6 +38,9 @@ const cookieStorage = {
 export function createBrowserClient() {
   if (supabaseInstance) return supabaseInstance
 
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
+
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn(
       'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY) are missing.'
@@ -58,3 +59,4 @@ export function createBrowserClient() {
 
   return supabaseInstance
 }
+

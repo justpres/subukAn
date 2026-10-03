@@ -99,6 +99,12 @@ In your Vercel Project Settings -> **Environment Variables**, configure the foll
 | `ADMIN_USER_IDS` | Comma-separated admin User IDs | `uuid-1,uuid-2` |
 | `ADMIN_EMAILS` | Comma-separated admin email addresses | `admin@yourdomain.com` |
 
+> [!IMPORTANT]
+> **Supabase Project URL vs REST URL Format**:
+> When copying the URL from **Supabase Dashboard -> Settings -> API**, copy the root **Project URL** (`https://xyzproject.supabase.co`).
+> Do **NOT** copy the **REST URL** (`https://xyzproject.supabase.co/rest/v1`).
+> Appending `/rest/v1`, `/auth/v1`, or trailing slashes directs authentication calls to PostgREST instead of GoTrue, triggering `PGRST125: Invalid path specified in request URL`. Our client sanitizes this automatically, but maintaining the canonical base URL in your environment settings is best practice.
+
 ---
 
 ### Step 5: Escrow Auto-Release Automation & GitHub Secrets

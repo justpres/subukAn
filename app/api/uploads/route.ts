@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseAnonKey, getSupabaseServiceRoleKey } from '@/lib/supabase/config';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { validateUploadFile } from '@/lib/validation/schemas';
@@ -74,9 +75,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Check environment configuration
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseAnonKey = getSupabaseAnonKey();
+    const supabaseServiceKey = getSupabaseServiceRoleKey() || process.env.SUPABASE_SECRET_KEY;
 
     if (!supabaseUrl) {
       console.error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');

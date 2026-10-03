@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '@/lib/supabase/config';
 import { verifyWebhookSignature } from '../../../../lib/payment/paymongo';
 
 interface WebhookAttributes {
@@ -86,8 +87,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize Supabase Admin to update tables bypassing standard user RLS constraints
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseServiceKey = getSupabaseServiceRoleKey();
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Webhook: Supabase configuration keys are missing.');

@@ -17,6 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
+import { getSupabaseUrl } from '@/lib/supabase/config'
 import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
@@ -693,7 +694,7 @@ export default function TaskWorkspacePage() {
       }
       
       // Construct Supabase Storage public address
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseUrl = getSupabaseUrl();
       const fileUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
       
       // Save URL path to taskResponses state

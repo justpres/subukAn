@@ -60,6 +60,10 @@ async function runPreflight() {
   // 1. Supabase Environment Variables
   if (!supabaseUrl || supabaseUrl.includes('your-supabase-project')) {
     recordCheck('Supabase URL', 'FAIL', 'NEXT_PUBLIC_SUPABASE_URL is missing or using placeholder');
+  } else if (/\/(rest|auth|graphql|storage)\/v\d+\/?$/i.test(supabaseUrl)) {
+    recordCheck('Supabase URL Format', 'FAIL', `NEXT_PUBLIC_SUPABASE_URL contains invalid subpath (${supabaseUrl}). Remove '/rest/v1' or '/auth/v1' - must be base project URL (e.g. https://xyz.supabase.co)`);
+  } else if (supabaseUrl.endsWith('/')) {
+    recordCheck('Supabase URL Format', 'WARN', `NEXT_PUBLIC_SUPABASE_URL ends with a trailing slash (${supabaseUrl}). Recommended: remove trailing slash.`);
   } else {
     recordCheck('Supabase URL', 'PASS', `Configured (${supabaseUrl})`);
   }

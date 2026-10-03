@@ -1,17 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseUrl, getSupabaseAnonKey } from './config'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+type SetCookieOptions = Parameters<ReturnType<typeof cookies>['set']>[2]
 
 export interface CookieStore {
   get(name: string): { name: string; value: string } | undefined
-  set(name: string, value: string, options?: any): void
-  delete(name: string, options?: any): void
+  set(name: string, value: string, options?: SetCookieOptions): void
+  delete(name: string, options?: SetCookieOptions): void
 }
 
 export function createServerClient(cookieStore: CookieStore) {
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
+
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn(
       'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY) are missing on the server.'
@@ -93,12 +96,15 @@ export function createMiddlewareClient(request: NextRequest, response: NextRespo
     },
     set: (key, value, options) => {
       // Sync cookies on both the incoming request and the outgoing response
-      request.cookies.set({ name: key, value, ...options })
-      response.cookies.set({ name: key, value, ...options })
+      const opts = options ? { ...options } : {}
+      request.cookies.set({ name: key, value, ...opts })
+      response.cookies.set({ name: key, value, ...opts })
     },
     delete: (key, options) => {
+      const opts = options ? { ...options } : {}
       request.cookies.delete(key)
       response.cookies.delete(key)
     },
   })
 }
+

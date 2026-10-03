@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '@/lib/supabase/config';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { processGCashPayout } from '../../../lib/payment/paymongo';
@@ -58,8 +59,8 @@ export async function POST(request: NextRequest) {
     const { submission_id, amount } = result.data;
 
     // Initialize Supabase Admin client
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseServiceKey = getSupabaseServiceRoleKey();
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Supabase credentials missing from environment variables.');

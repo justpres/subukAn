@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseAnonKey, getSupabaseServiceRoleKey } from '@/lib/supabase/config';
 import { z } from 'zod';
 import { createRouteHandlerClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
@@ -46,8 +47,8 @@ async function authenticateUser(req: NextRequest) {
   const authHeader = req.headers.get('Authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseAnonKey = getSupabaseAnonKey();
     if (supabaseUrl && supabaseAnonKey) {
       const authClient = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
@@ -67,8 +68,8 @@ async function authenticateUser(req: NextRequest) {
 
 // Initialize Supabase Admin client to bypass RLS policies and manage verification state
 function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseServiceKey = getSupabaseServiceRoleKey();
 
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Supabase credentials missing from environment variables.');

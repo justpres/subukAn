@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '@/lib/supabase/config';
 import { z } from 'zod';
 import { processGCashPayout } from '@/lib/payment/paymongo';
 import { sanitizeDatabaseError } from '@/lib/utils/error';
@@ -15,8 +16,8 @@ const resolveDisputeSchema = z.object({
 });
 
 function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseServiceKey = getSupabaseServiceRoleKey();
 
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Supabase credentials missing from environment variables.');
