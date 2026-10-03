@@ -14,6 +14,31 @@ function DashboardGateContent() {
   const [roleError, setRoleError] = useState<string | null>(null)
   const supabase = createBrowserClient()
 
+  // 1. Immediately redirect users who already have a role assigned
+  useEffect(() => {
+    const checkExistingProfileRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
+
+          if (profile?.role === 'poster' || profile?.role === 'tester') {
+            router.replace(`/dashboard/${profile.role}`)
+          }
+        }
+      } catch (err) {
+        console.error('Error checking existing role:', err)
+      }
+    }
+
+    checkExistingProfileRole()
+  }, [router, supabase])
+
+  // 2. Auto-assign role on initial onboarding query parameter if not already set
   useEffect(() => {
     const autoAssignRole = async () => {
       if (roleParam === 'poster' || roleParam === 'tester') {
@@ -22,12 +47,17 @@ function DashboardGateContent() {
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            // Check if profile exists first
             const { data: existingProfile } = await supabase
               .from('profiles')
-              .select('id')
+              .select('id, role')
               .eq('id', user.id)
               .maybeSingle()
+
+            if (existingProfile?.role) {
+              // Account already has an immutable role; redirect immediately
+              router.replace(`/dashboard/${existingProfile.role}`)
+              return
+            }
 
             if (existingProfile) {
               const { error: updateError } = await supabase
@@ -38,7 +68,7 @@ function DashboardGateContent() {
                 })
                 .eq('id', user.id)
               if (updateError) {
-                console.error('Auto-role update failed:', updateError.message)
+                console.error('Initial role setup failed:', updateError.message)
                 setRoleError(sanitizeDatabaseError(updateError))
               }
             } else {
@@ -51,7 +81,7 @@ function DashboardGateContent() {
                   updated_at: new Date().toISOString()
                 })
               if (insertError) {
-                console.error('Auto-role insert failed:', insertError.message)
+                console.error('Initial profile creation failed:', insertError.message)
                 setRoleError(sanitizeDatabaseError(insertError))
               }
             }
@@ -70,18 +100,24 @@ function DashboardGateContent() {
     autoAssignRole()
   }, [roleParam, router, supabase])
 
+  // 3. Manual role selection for initial onboarding
   const handleSelectRole = async (role: 'poster' | 'tester') => {
     setUpdating(role)
     setRoleError(null)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        // Check if profile exists first
         const { data: existingProfile } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, role')
           .eq('id', user.id)
           .maybeSingle()
+
+        if (existingProfile?.role) {
+          // Account already has an immutable role; redirect immediately
+          router.replace(`/dashboard/${existingProfile.role}`)
+          return
+        }
 
         if (existingProfile) {
           const { error: updateError } = await supabase
@@ -92,7 +128,7 @@ function DashboardGateContent() {
             })
             .eq('id', user.id)
           if (updateError) {
-            console.error('Role update failed:', updateError.message)
+            console.error('Initial role setup failed:', updateError.message)
             setRoleError(sanitizeDatabaseError(updateError))
           }
         } else {
@@ -105,7 +141,7 @@ function DashboardGateContent() {
               updated_at: new Date().toISOString()
             })
           if (insertError) {
-            console.error('Role insert failed:', insertError.message)
+            console.error('Initial profile creation failed:', insertError.message)
             setRoleError(sanitizeDatabaseError(insertError))
           }
         }
@@ -114,7 +150,6 @@ function DashboardGateContent() {
     } catch (err: unknown) {
       console.error('Error selecting role:', err)
       setRoleError(sanitizeDatabaseError(err))
-      // Always fallback to navigating to requested role dashboard
       router.push(`/dashboard/${role}`)
     } finally {
       setUpdating(null)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { processGCashPayout } from '../../../lib/payment/paymongo';
@@ -14,7 +14,7 @@ const payoutRequestSchema = z.object({
 /**
  * Helper to check listing status and transition it to 'released' if all slots are filled and paid out.
  */
-async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string, totalSlots: number) {
+async function checkAndUpdateListingStatus(supabaseAdmin: SupabaseClient, listingId: string, totalSlots: number) {
   try {
     const { data: submissions, error } = await supabaseAdmin
       .from('submissions')
@@ -26,7 +26,7 @@ async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string
       return;
     }
 
-    const approvedCount = submissions.filter((s: any) => s.status === 'approved').length;
+    const approvedCount = submissions.filter((s: { status: string }) => s.status === 'approved').length;
 
     if (approvedCount >= totalSlots) {
       const { error: updateError } = await supabaseAdmin
@@ -38,7 +38,7 @@ async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string
         console.error('Failed to update listing status to released:', updateError);
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Exception in checkAndUpdateListingStatus:', error);
   }
 }
@@ -46,7 +46,7 @@ async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate payload
-    const body = await request.json();
+    const body: unknown = await request.json();
     const result = payoutRequestSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         const tokenCookie = cookieStore.getAll().find((c) => c.name.endsWith('-auth-token'));
         if (tokenCookie) {
           try {
-            const parsed = JSON.parse(tokenCookie.value);
+            const parsed = JSON.parse(tokenCookie.value) as { access_token?: string };
             token = parsed?.access_token;
           } catch {
             token = tokenCookie.value;
@@ -131,15 +131,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Associated listing not found' }, { status: 404 });
     }
 
-    // 4. Enforce RLS database authorization checks
+    // 4. Enforce RLS database authorization checks & auto-release timestamp integrity
     const isPoster = listing.poster_id === user.id;
-    const isAutoReleased = submission.auto_release_at && new Date(submission.auto_release_at) <= new Date();
+    const isAutoReleased = Boolean(submission.auto_release_at && new Date(submission.auto_release_at) <= new Date());
 
     if (!isPoster && !isAutoReleased) {
       return NextResponse.json(
         {
           error: 'Forbidden: You must be the listing poster to trigger payout, or the review window must have expired (auto-released).'
         },
+        { status: 403 }
+      );
+    }
+
+    // If non-poster is triggering via auto-release, verify submission is legitimately pending review
+    if (!isPoster && isAutoReleased && submission.status !== 'pending_review') {
+      return NextResponse.json(
+        { error: 'Forbidden: Auto-release can only be triggered for submissions pending review.' },
         { status: 403 }
       );
     }
@@ -174,7 +182,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Tester profile not found' }, { status: 404 });
     }
 
-    // 5. Implement strict idempotency keys to prevent double payouts
+    // 5. Fail-Closed Phone Validation: Check tester phone from auth.users (requires service_role)
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(submission.tester_id);
+    const testerPhone = authUser?.user?.phone;
+
+    if (!testerPhone || testerPhone.trim() === '') {
+      return NextResponse.json(
+        { error: 'Cannot disburse payout: Tester does not have a verified GCash mobile number on file.' },
+        { status: 400 }
+      );
+    }
+
+    // 6. Implement strict idempotency keys to prevent double payouts
     // Hash of submission_id + tester_id guarantees only one payout record ever exists for this submission
     const idempotencyKey = crypto
       .createHash('sha256')
@@ -182,7 +201,7 @@ export async function POST(request: NextRequest) {
       .digest('hex');
 
     // Retrieve existing payout record if it exists
-    const { data: existingPayout, error: checkError } = await supabaseAdmin
+    const { data: existingPayout } = await supabaseAdmin
       .from('payouts')
       .select('*')
       .eq('idempotency_key', idempotencyKey)
@@ -249,13 +268,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to initialize payout transaction' }, { status: 500 });
     }
 
-    // 6. Execute the payment processor client wrapper
-    // Get tester phone number from auth.users (requires service_role)
-    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(submission.tester_id);
-    const testerPhone = authUser?.user?.phone || '09171234567'; // Fallback to mock PH phone for testing if phone is blank
-
+    // 7. Execute the payment processor client wrapper
     // Fetch poster secure payment settings details
-    let customSettings = null;
+    let customSettings: Record<string, unknown> | null = null;
     try {
       const { data: settingsRow } = await supabaseAdmin
         .from('poster_payment_settings')
@@ -263,9 +278,9 @@ export async function POST(request: NextRequest) {
         .eq('id', listing.poster_id)
         .single();
       if (settingsRow?.payment_settings) {
-        customSettings = settingsRow.payment_settings;
+        customSettings = settingsRow.payment_settings as Record<string, unknown>;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn('Failed to fetch poster payment settings customSettings:', e);
     }
 
@@ -341,7 +356,7 @@ export async function POST(request: NextRequest) {
           payout: payoutRecord,
         });
       }
-    } catch (processorError: any) {
+    } catch (processorError: unknown) {
       console.error('Payment gateway error:', processorError);
       // Mark transaction status as failed in DB
       await supabaseAdmin
@@ -349,15 +364,17 @@ export async function POST(request: NextRequest) {
         .update({ status: 'failed' })
         .eq('id', payoutRecord.id);
 
+      const errorMessage = processorError instanceof Error ? processorError.message : 'Unknown gateway error';
       return NextResponse.json(
-        { error: 'Processor connection error: ' + processorError.message },
+        { error: 'Processor connection error: ' + errorMessage },
         { status: 502 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Internal server error in payout route:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unexpected server error';
     return NextResponse.json(
-      { error: 'Internal server error: ' + error.message },
+      { error: 'Internal server error: ' + errorMessage },
       { status: 500 }
     );
   }

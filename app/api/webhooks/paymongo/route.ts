@@ -1,11 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { verifyWebhookSignature } from '../../../../lib/payment/paymongo';
+
+interface WebhookAttributes {
+  type?: string;
+  data?: {
+    id?: string;
+    type?: string;
+    attributes?: {
+      amount?: number;
+      reference_number?: string;
+      external_reference?: string;
+      description?: string;
+      metadata?: {
+        listing_id?: string;
+        submission_id?: string;
+        idempotency_key?: string;
+      };
+      [key: string]: unknown;
+    };
+  };
+}
+
+interface WebhookPayload {
+  data?: {
+    id?: string;
+    type?: string;
+    attributes?: WebhookAttributes;
+  };
+}
 
 /**
  * Helper to check listing status and transition it to 'released' if all slots are filled and paid out.
  */
-async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string, totalSlots: number) {
+async function checkAndUpdateListingStatus(supabaseAdmin: SupabaseClient, listingId: string, totalSlots: number) {
   try {
     const { data: submissions, error } = await supabaseAdmin
       .from('submissions')
@@ -17,7 +45,7 @@ async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string
       return;
     }
 
-    const approvedCount = submissions.filter((s: any) => s.status === 'approved').length;
+    const approvedCount = submissions.filter((s: { status: string }) => s.status === 'approved').length;
 
     if (approvedCount >= totalSlots) {
       const { error: updateError } = await supabaseAdmin
@@ -29,7 +57,7 @@ async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string
         console.error('Failed to update listing status to released on webhook:', updateError);
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Exception in checkAndUpdateListingStatus:', error);
   }
 }
@@ -41,7 +69,7 @@ export async function POST(request: NextRequest) {
     const signatureHeader = request.headers.get('paymongo-signature');
     const webhookSecret = process.env.PAYMONGO_WEBHOOK_SIGNING_SECRET || '';
 
-    // 2. Validate webhook signature using our wrapper helper
+    // 2. Validate webhook signature using our wrapper helper (includes 5m replay window check)
     const isValid = verifyWebhookSignature(rawBody, signatureHeader, webhookSecret);
     if (!isValid) {
       console.warn('Unauthorized webhook signature detected.');
@@ -49,10 +77,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the request payload
-    let payload: any;
+    let payload: WebhookPayload;
     try {
-      payload = JSON.parse(rawBody);
-    } catch (parseError) {
+      payload = JSON.parse(rawBody) as WebhookPayload;
+    } catch (parseError: unknown) {
       console.error('Failed to parse webhook JSON payload:', parseError);
       return NextResponse.json({ error: 'Bad Request: Invalid JSON' }, { status: 400 });
     }
@@ -107,6 +135,20 @@ export async function POST(request: NextRequest) {
       if (findError || !listing) {
         console.error(`Listing ${listingId} not found in database.`);
         return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
+      }
+
+      // Verify payment amount matches listing total budget (in cents)
+      const expectedAmountInCents = Math.round(listing.total_budget * 100);
+      const paidAmountInCents = attributes?.amount;
+
+      if (typeof paidAmountInCents === 'number' && paidAmountInCents !== expectedAmountInCents) {
+        console.error(
+          `Security Alert: Payment amount mismatch for listing ${listingId}. Expected: ${expectedAmountInCents}, Received: ${paidAmountInCents}`
+        );
+        return NextResponse.json(
+          { error: 'Bad Request: Payment amount does not match listing total budget' },
+          { status: 400 }
+        );
       }
 
       // Update Listing status to 'filling' (escrow funded)
@@ -220,8 +262,9 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `Webhook received but event type '${eventType}' not processed`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Critical internal error in webhook router:', error);
-    return NextResponse.json({ error: 'Internal server error: ' + error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown server error';
+    return NextResponse.json({ error: 'Internal server error: ' + errorMessage }, { status: 500 });
   }
 }

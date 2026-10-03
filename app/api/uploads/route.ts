@@ -27,7 +27,7 @@ function validateFile(filename: string, fileType: string, fileSize: number) {
   const isAllowedExt = extension && ALLOWED_EXTENSIONS.includes(extension);
   const isAllowedMime = ALLOWED_MIME_TYPES.includes(fileType.toLowerCase());
 
-  if (!isAllowedExt && !isAllowedMime) {
+  if (!isAllowedExt || !isAllowedMime) {
     return {
       valid: false,
       error: 'Invalid file type. Allowed types are webm, mp4, png, jpeg.',
@@ -191,10 +191,11 @@ export async function POST(req: NextRequest) {
       token: uploadData.token,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Unhandled exception in uploads API route:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
-      { error: 'Internal Server Error', message: error?.message || 'An unexpected error occurred' },
+      { error: 'Internal Server Error', message: errorMessage },
       { status: 500 }
     );
   }

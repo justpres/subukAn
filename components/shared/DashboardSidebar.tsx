@@ -8,7 +8,6 @@ import {
   FileText, 
   CheckSquare, 
   DollarSign, 
-  ArrowLeftRight, 
   LogOut, 
   X,
   Settings,
@@ -154,16 +153,6 @@ export function DashboardSidebar({ role, isOpen, onToggle }: SidebarProps) {
         </nav>
 
         <div className="border-t border-slate-800 p-4 space-y-2">
-          <Link 
-            href="/dashboard?select=true"
-            scroll={false}
-            onClick={() => onToggle(false)}
-            className="flex items-center space-x-3 rounded-lg px-4 py-3 text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2955E3]"
-          >
-            <ArrowLeftRight className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className="font-medium">Switch Role</span>
-          </Link>
-          
           <button 
             type="button"
             onClick={handleLogout}

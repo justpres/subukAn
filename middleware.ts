@@ -138,8 +138,7 @@ export async function middleware(request: NextRequest) {
       }
 
       if (pathname === '/dashboard' || pathname === '/dashboard/') {
-        const forceSelect = request.nextUrl.searchParams.get('select') === 'true'
-        if (!forceSelect && profile && (profile.role === 'poster' || profile.role === 'tester')) {
+        if (profile && (profile.role === 'poster' || profile.role === 'tester')) {
           return NextResponse.redirect(new URL(`/dashboard/${profile.role}`, request.url))
         }
         return response

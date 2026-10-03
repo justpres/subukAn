@@ -28,6 +28,7 @@ import {
   ClipboardList
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
+import { DynamicWatermark } from '@/components/shared/DynamicWatermark'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 // Interfaces mapping to Supabase Tables schema
@@ -687,8 +688,8 @@ export default function SubmissionReviewPage({ params }: PageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
               <div className="space-y-3">
                 <div>
-                  <span className="text-xs text-gray-400 block font-semibold uppercase tracking-wider">Full Name</span>
-                  <span className="font-bold text-gray-800 text-base">{profile.full_name}</span>
+                  <span className="text-xs text-gray-400 block font-semibold uppercase tracking-wider">Tester Identity</span>
+                  <span className="font-bold text-gray-800 text-base font-mono">Tester #{profile.id.slice(0, 8)}</span>
                 </div>
                 <div>
                   <span className="text-xs text-gray-400 block font-semibold uppercase tracking-wider">Verification status</span>
@@ -803,8 +804,9 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                       <div className="space-y-2 pt-2 border-t border-gray-100">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Required Screen Recording</span>
                         {response.recording_url ? (
-                          <div className="bg-[#121212] rounded-xl border border-gray-800 overflow-hidden shadow-md">
-                            <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex items-center justify-between text-xs text-gray-400">
+                          <div className="bg-[#121212] rounded-xl border border-gray-800 overflow-hidden shadow-md relative">
+                            <DynamicWatermark testerId={submission.tester_id} className="opacity-[0.12] dark:opacity-[0.15]" />
+                            <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex items-center justify-between text-xs text-gray-400 relative z-10">
                               <div className="flex items-center gap-2">
                                 <Video className="w-4 h-4 text-blue-500" />
                                 <span className="font-mono truncate max-w-xs">{response.recording_url.split('/').pop()}</span>
@@ -853,9 +855,10 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                             
                             {signedMediaUrls[`image_${response.id}`] ? (
                               <div
-                                className="relative group cursor-pointer"
+                                className="relative group cursor-pointer overflow-hidden"
                                 onClick={() => setLightboxUrl(signedMediaUrls[`image_${response.id}`])}
                               >
+                                <DynamicWatermark testerId={submission.tester_id} className="opacity-[0.12]" />
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={signedMediaUrls[`image_${response.id}`]}
@@ -925,7 +928,7 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                       }`}
                     >
                       <div className="flex items-center gap-1.5 font-bold mb-1">
-                        <span>{comment.profiles?.full_name || 'User'}</span>
+                        <span>{isPosterRole ? (comment.profiles?.full_name || 'You (Poster)') : `Tester #${(comment.user_id || '').slice(0, 8)}`}</span>
                         <span
                           className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] font-extrabold ${
                             isPosterRole ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'

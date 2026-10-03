@@ -24,6 +24,7 @@ import { AgreementModal } from '@/components/shared/AgreementModal'
 import { EscrowStatusBar } from '@/components/shared/EscrowStatusBar'
 import { TimerDisplay } from '@/components/shared/TimerDisplay'
 import { WorkspaceStatusCard } from '@/components/shared/WorkspaceStatusCard'
+import { DynamicWatermark } from '@/components/shared/DynamicWatermark'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 
 interface Listing {
@@ -180,17 +181,45 @@ export default function FiveSecondTestWorkspace() {
     }
   };
 
-  // Basic Fingerprint generator
+  // Hardened Fingerprint generator (Entropy: Canvas 2D + WebGL + Screen + UserAgent)
   const getFingerprint = () => {
     if (typeof window === 'undefined') return '';
-    return `${navigator.userAgent}|${window.screen.width}x${window.screen.height}|${navigator.language}`;
+    let canvasHash = '';
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillText('subukan,fingerprint', 2, 2);
+        canvasHash = canvas.toDataURL().slice(-16);
+      }
+    } catch {
+      // non-blocking
+    }
+    let glRenderer = '';
+    try {
+      const glCanvas = document.createElement('canvas');
+      const gl = glCanvas.getContext('webgl');
+      if (gl) {
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+          glRenderer = String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '');
+        }
+      }
+    } catch {
+      // non-blocking
+    }
+    return `${navigator.userAgent}|${window.screen.width}x${window.screen.height}|${navigator.language}|${canvasHash}|${glRenderer}`;
   };
 
-  // Client IP fetcher
+  // Server-side Client IP fetcher (replaces spoofable third-party ipify)
   useEffect(() => {
-    fetch('https://api.ipify.org?format=json')
+    fetch('/api/client-ip')
       .then(res => res.json())
-      .then(data => setIpAddress(data.ip))
+      .then(data => {
+        if (data?.ip) setIpAddress(data.ip);
+      })
       .catch(() => {});
   }, []);
 
@@ -918,7 +947,8 @@ export default function FiveSecondTestWorkspace() {
         </div>
 
         <div className="max-w-3xl mx-auto px-6 mt-6">
-          <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-[12px] overflow-hidden shadow-sm relative">
+            <DynamicWatermark testerId={submission?.tester_id} />
             <EscrowStatusBar 
               budget={listing.rate_per_tester} 
               slots={listing.slots_count} 

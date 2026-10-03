@@ -1,4 +1,4 @@
-﻿import { uuidToBytes32, BASE_MAINNET, BASE_SEPOLIA } from './client';
+import { uuidToBytes32, BASE_MAINNET, BASE_SEPOLIA } from './client';
 
 export const SUBUKAN_ESCROW_ABI = [
   {
@@ -28,6 +28,16 @@ export const SUBUKAN_ESCROW_ABI = [
     type: 'function',
     name: 'refundRemaining',
     inputs: [{ name: 'listingId', type: 'bytes32' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'registerSubmission',
+    inputs: [
+      { name: 'listingId', type: 'bytes32' },
+      { name: 'submissionId', type: 'bytes32' },
+    ],
     outputs: [],
     stateMutability: 'nonpayable',
   },

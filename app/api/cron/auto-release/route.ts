@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { processGCashPayout } from '@/lib/payment/paymongo';
 
@@ -17,7 +17,7 @@ interface PayoutSummary {
 /**
  * Helper to check listing status and transition it to 'released' if all slots are filled and paid out.
  */
-async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string, totalSlots: number) {
+async function checkAndUpdateListingStatus(supabaseAdmin: SupabaseClient, listingId: string, totalSlots: number) {
   try {
     const { data: submissions, error } = await supabaseAdmin
       .from('submissions')
@@ -29,7 +29,7 @@ async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string
       return;
     }
 
-    const approvedCount = submissions.filter((s: any) => s.status === 'approved').length;
+    const approvedCount = submissions.filter((s: { status: string }) => s.status === 'approved').length;
 
     if (approvedCount >= totalSlots) {
       const { error: updateError } = await supabaseAdmin
@@ -41,26 +41,35 @@ async function checkAndUpdateListingStatus(supabaseAdmin: any, listingId: string
         console.error('Failed to update listing status to released:', updateError);
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Exception in checkAndUpdateListingStatus:', error);
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Verify security authorization headers
+    // 1. Verify security authorization headers with timing-safe comparison
     const authHeader = request.headers.get('authorization');
-    const isVercelCron = request.headers.get('x-vercel-cron') === 'true';
     const cronSecret = process.env.CRON_SECRET;
 
     let isAuthorized = false;
 
-    if (isVercelCron) {
-      isAuthorized = true;
-    } else if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-      isAuthorized = true;
+    if (cronSecret) {
+      // When CRON_SECRET is configured, strictly enforce Bearer token verification with timingSafeEqual.
+      // Unverified x-vercel-cron header bypass is eliminated.
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        const tokenBuf = Buffer.from(token);
+        const secretBuf = Buffer.from(cronSecret);
+        if (tokenBuf.length === secretBuf.length && crypto.timingSafeEqual(tokenBuf, secretBuf)) {
+          isAuthorized = true;
+        }
+      }
     } else if (process.env.NODE_ENV !== 'production') {
       // Allow local development testing without CRON_SECRET configured
+      isAuthorized = true;
+    } else if (request.headers.get('x-vercel-cron') === 'true') {
+      // Fallback only if CRON_SECRET is not configured in environment
       isAuthorized = true;
     }
 
@@ -135,6 +144,25 @@ export async function GET(request: NextRequest) {
 
       const ratePerTester = listing.rate_per_tester;
       const listingSlotsCount = listing.slots_count;
+
+      // Fail-closed phone verification before creating payout record
+      const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(sub.tester_id);
+      if (authUserError || !authUser) {
+        console.warn(`Could not fetch auth user phone for tester ${sub.tester_id}:`, authUserError);
+      }
+      const testerPhone = authUser?.user?.phone;
+
+      if (!testerPhone || testerPhone.trim() === '') {
+        console.warn(`Tester ${sub.tester_id} has no verified GCash phone on file.`);
+        payoutsProcessed.push({
+          submission_id: sub.id,
+          tester_id: sub.tester_id,
+          amount: ratePerTester,
+          status: 'failed',
+          error: 'Tester does not have a verified GCash mobile number on file.',
+        });
+        continue;
+      }
 
       // Generate the strict idempotency key: sha256(submission_id + tester_id)
       const idempotencyKey = crypto
@@ -254,13 +282,6 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Fetch user phone number from auth.users (requires service_role client)
-      const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(sub.tester_id);
-      if (authUserError || !authUser) {
-        console.warn(`Could not fetch auth user phone for tester ${sub.tester_id}:`, authUserError);
-      }
-      const testerPhone = authUser?.user?.phone || '09171234567'; // Fallback to mock PH phone for testing if phone is blank
-
       // Execute GCash Payout
       try {
         const payoutResult = await processGCashPayout({
@@ -323,7 +344,7 @@ export async function GET(request: NextRequest) {
             payout_id: payoutResult.id,
           });
         }
-      } catch (payoutError: any) {
+      } catch (payoutError: unknown) {
         console.error(`Error processing GCash payout for submission ${sub.id}:`, payoutError);
         // Reset payout status to failed in the ledger to allow future retries
         await supabaseAdmin
@@ -331,12 +352,13 @@ export async function GET(request: NextRequest) {
           .update({ status: 'failed' })
           .eq('id', payoutRecord.id);
 
+        const errorMessage = payoutError instanceof Error ? payoutError.message : 'Payment processor runtime error';
         payoutsProcessed.push({
           submission_id: sub.id,
           tester_id: sub.tester_id,
           amount: ratePerTester,
           status: 'failed',
-          error: payoutError.message || 'Payment processor runtime error',
+          error: errorMessage,
         });
       }
     }
@@ -347,10 +369,11 @@ export async function GET(request: NextRequest) {
       processed_count: payoutsProcessed.length,
       payouts: payoutsProcessed,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Critical failure in auto-release route:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error: ' + error.message },
+      { error: 'Internal server error: ' + errorMessage },
       { status: 500 }
     );
   }

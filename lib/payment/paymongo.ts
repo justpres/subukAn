@@ -264,18 +264,33 @@ export function verifyWebhookSignature(
     return false;
   }
 
+  // Enforce 5-minute (300-second) timestamp replay window
+  const timestampNum = parseInt(timestamp, 10);
+  if (isNaN(timestampNum)) {
+    return false;
+  }
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowInSeconds - timestampNum) > 300) {
+    console.warn(`PayMongo webhook timestamp outside 300s replay window: drift is ${Math.abs(nowInSeconds - timestampNum)}s`);
+    return false;
+  }
+
   try {
-    // PayMongo payload signature signature verification is: timestamp + "." + rawBody
+    // PayMongo payload signature verification is: timestamp + "." + rawBody
     const payload = `${timestamp}.${rawBody}`;
     const expectedSignature = crypto
       .createHmac('sha256', webhookSecret)
       .update(payload)
       .digest('hex');
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(expectedSignature, 'hex')
-    );
+    const sigBuf = Buffer.from(signature, 'hex');
+    const expectedBuf = Buffer.from(expectedSignature, 'hex');
+
+    if (sigBuf.length !== expectedBuf.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(sigBuf, expectedBuf);
   } catch (error) {
     console.error('Error verifying webhook signature:', error);
     return false;
