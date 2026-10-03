@@ -17,7 +17,8 @@ graph LR
     Vercel --> SupabaseStorage[Supabase Storage: task-attachments]
     Vercel --> PayMongo[PayMongo Gateway: Cards / GCash Escrow & Disbursements]
     Vercel --> Semaphore[Semaphore API: SMS OTP Dispatch]
-    VercelCron[Vercel Cron: 0 * * * *] --> Vercel
+    VercelCron[Vercel Daily Cron: 0 16 * * * (Midnight PHT)] --> Vercel
+    GitHubCron[GitHub Actions Cron: */30 * * * * (30-min Payouts)] --> Vercel
 ```
 
 ---
@@ -92,13 +93,41 @@ In your Vercel Project Settings -> **Environment Variables**, configure the foll
 | `PAYMONGO_WEBHOOK_SIGNING_SECRET` | Live Webhook Signing Secret | `whsec_...` |
 | `SMS_API_KEY` | Semaphore SMS API Key | `abc123456...` |
 | `SMS_SENDER_NAME` | SMS Sender Header | `Subukan` |
-| `CRON_SECRET` | Auto-Release Hourly Cron Token | `super_secure_random_uuid` |
+| `CRON_SECRET` | Auto-Release Cron Shared Secret Token (timing-safe Bearer auth) | `super_secure_random_uuid` |
 | `ADMIN_USER_IDS` | Comma-separated admin User IDs | `uuid-1,uuid-2` |
 | `ADMIN_EMAILS` | Comma-separated admin email addresses | `admin@yourdomain.com` |
 
 ---
 
-### Step 5: Automated Preflight Health Check
+### Step 5: Escrow Auto-Release Automation & GitHub Secrets
+
+#### 1. Vercel Hobby Limit & Dual-Cron Architecture
+- **Vercel Hobby 1-Cron/Day Limit**: Vercel accounts on the Hobby tier enforce a hard platform limit of **1 cron invocation per day**. Deploying a configuration with a frequency greater than once daily (e.g. hourly `0 * * * *` or `*/30 * * * *`) fails during deployment with:
+  ```
+  Error: The Hobby plan only supports 1 cron job per day. Upgrade to Pro for more frequent cron jobs.
+  ```
+- **Solution 2 (Production Hybrid Automation)**:
+  1. **`vercel.json`**: Configured to run once daily at 16:00 UTC (`0 16 * * *`, corresponding to 00:00 Philippine Standard Time / midnight PHT). This adheres strictly to Vercel Hobby rules and acts as a built-in safety net.
+  2. **GitHub Actions Workflow (`.github/workflows/auto-release-cron.yml`)**: Runs every 30 minutes (`cron: '*/30 * * * *'`) using free GitHub Actions scheduled runners. It executes a secure HTTPS GET request to the `/api/cron/auto-release` endpoint with constant-time Bearer token verification.
+  3. **Manual Trigger Support**: Includes `workflow_dispatch:` allowing operators to trigger escrow auto-release on demand directly from the GitHub Actions dashboard.
+
+#### 2. Required GitHub Repository Secrets
+In your GitHub repository, navigate to **Settings** -> **Secrets and variables** -> **Actions** -> **New repository secret**, and configure:
+
+| Secret Name | Description | Example Value |
+| :--- | :--- | :--- |
+| `PRODUCTION_DOMAIN` | The public hostname where SubukAn is hosted on Vercel. Protocol (`https://`) and trailing slashes are automatically sanitized. | `subukan.vercel.app` or `subukan.ph` |
+| `CRON_SECRET` | The exact shared secret matching the `CRON_SECRET` configured in Vercel Environment Variables. | `super_secure_random_uuid` |
+
+#### 3. Execution & Idempotency Safeguards
+- The workflow validates that both secrets exist before making network calls.
+- The `curl` request uses connection timeouts (15s), maximum execution limit (60s), and automatic retries (2 attempts) for network resilience.
+- The workflow evaluates the returned HTTP status code and fails with an explicit error annotation if status code != 200.
+- **Strict Idempotency**: The API route hashes `sha256(submission_id:tester_id)` as the idempotency key in the `payouts` ledger table. Even if the GitHub Actions cron and Vercel daily cron trigger at the same minute, the database uniquely deduplicates payouts and prevents double disbursement.
+
+---
+
+### Step 6: Automated Preflight Health Check
 
 Before opening the site to real users, run the automated health check from your terminal:
 

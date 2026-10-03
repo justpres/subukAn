@@ -35,7 +35,7 @@ graph LR
   * [x] Clean Next.js production build (`npm run build`).
   * [x] Automated Preflight Health Check utility (`node scripts/preflight-check.mjs`).
   * [x] Serverless database-backed OTP persistence (`supabase/migrations/00013_create_phone_verifications.sql`).
-  * [x] Vercel hourly cron configuration for escrow auto-release (`vercel.json`).
+  * [x] Scheduled cron configuration for escrow auto-release: Vercel daily fallback (`vercel.json`) & GitHub Actions 30-minute runner (`.github/workflows/auto-release-cron.yml`).
   * [x] Admin dispute moderation & arbitration center (`/dashboard/admin/disputes`).
   * [x] Link integrity audit: all 13 application routes and external links verified.
 
