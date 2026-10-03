@@ -153,3 +153,26 @@ export const submitTestResponseSchema = z.object({
 });
 
 export type SubmitTestResponseInput = z.infer<typeof submitTestResponseSchema>;
+
+export const MAX_UPLOAD_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+export const ALLOWED_UPLOAD_EXTENSIONS = ['webm', 'mp4', 'png', 'jpeg', 'jpg'] as const;
+export const ALLOWED_UPLOAD_MIME_TYPES = ['video/webm', 'video/mp4', 'image/png', 'image/jpeg', 'image/jpg'] as const;
+
+export function validateUploadFile(filename: string, fileType: string, fileSize: number): { valid: boolean; error?: string } {
+  if (fileSize > MAX_UPLOAD_FILE_SIZE) {
+    return { valid: false, error: 'File size exceeds maximum limit of 100MB' };
+  }
+
+  const extension = filename.split('.').pop()?.toLowerCase();
+  const isAllowedExt = Boolean(extension && (ALLOWED_UPLOAD_EXTENSIONS as readonly string[]).includes(extension));
+  const isAllowedMime = (ALLOWED_UPLOAD_MIME_TYPES as readonly string[]).includes(fileType.toLowerCase());
+
+  if (!isAllowedExt || !isAllowedMime) {
+    return {
+      valid: false,
+      error: 'Invalid file type. Allowed types are webm, mp4, png, jpeg.',
+    };
+  }
+
+  return { valid: true };
+}

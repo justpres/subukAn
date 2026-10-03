@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { validateUploadFile } from '@/lib/validation/schemas';
 
 // Validate requested fields using Zod
 const uploadRequestSchema = z.object({
@@ -10,32 +11,6 @@ const uploadRequestSchema = z.object({
   fileType: z.string().min(1, 'fileType is required'),
   fileSize: z.number().int().positive('fileSize must be a positive integer'),
 });
-
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 104,857,600 bytes (100MB)
-const ALLOWED_EXTENSIONS = ['webm', 'mp4', 'png', 'jpeg', 'jpg'];
-const ALLOWED_MIME_TYPES = ['video/webm', 'video/mp4', 'image/png', 'image/jpeg', 'image/jpg'];
-
-/**
- * Validates the file specifications on the server
- */
-function validateFile(filename: string, fileType: string, fileSize: number) {
-  if (fileSize > MAX_FILE_SIZE) {
-    return { valid: false, error: 'File size exceeds maximum limit of 100MB' };
-  }
-
-  const extension = filename.split('.').pop()?.toLowerCase();
-  const isAllowedExt = extension && ALLOWED_EXTENSIONS.includes(extension);
-  const isAllowedMime = ALLOWED_MIME_TYPES.includes(fileType.toLowerCase());
-
-  if (!isAllowedExt || !isAllowedMime) {
-    return {
-      valid: false,
-      error: 'Invalid file type. Allowed types are webm, mp4, png, jpeg.',
-    };
-  }
-
-  return { valid: true };
-}
 
 /**
  * Extracts the access token from Authorization header or Cookies
@@ -93,7 +68,7 @@ export async function POST(req: NextRequest) {
     const { filename, fileType, fileSize } = parseResult.data;
 
     // 2. Perform size and type checks
-    const validation = validateFile(filename, fileType, fileSize);
+    const validation = validateUploadFile(filename, fileType, fileSize);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }

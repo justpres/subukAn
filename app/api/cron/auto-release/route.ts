@@ -68,9 +68,6 @@ export async function GET(request: NextRequest) {
     } else if (process.env.NODE_ENV !== 'production') {
       // Allow local development testing without CRON_SECRET configured
       isAuthorized = true;
-    } else if (request.headers.get('x-vercel-cron') === 'true') {
-      // Fallback only if CRON_SECRET is not configured in environment
-      isAuthorized = true;
     }
 
     if (!isAuthorized) {

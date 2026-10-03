@@ -70,6 +70,7 @@ function DashboardGateContent() {
               if (updateError) {
                 console.error('Initial role setup failed:', updateError.message)
                 setRoleError(sanitizeDatabaseError(updateError))
+                return
               }
             } else {
               const { error: insertError } = await supabase
@@ -83,6 +84,7 @@ function DashboardGateContent() {
               if (insertError) {
                 console.error('Initial profile creation failed:', insertError.message)
                 setRoleError(sanitizeDatabaseError(insertError))
+                return
               }
             }
           }
@@ -90,7 +92,6 @@ function DashboardGateContent() {
         } catch (err) {
           console.error('Error auto-assigning role:', err)
           setRoleError(sanitizeDatabaseError(err))
-          router.push(`/dashboard/${roleParam}`)
         } finally {
           setUpdating(null)
         }
@@ -130,6 +131,7 @@ function DashboardGateContent() {
           if (updateError) {
             console.error('Initial role setup failed:', updateError.message)
             setRoleError(sanitizeDatabaseError(updateError))
+            return
           }
         } else {
           const { error: insertError } = await supabase
@@ -143,6 +145,7 @@ function DashboardGateContent() {
           if (insertError) {
             console.error('Initial profile creation failed:', insertError.message)
             setRoleError(sanitizeDatabaseError(insertError))
+            return
           }
         }
       }
@@ -150,7 +153,6 @@ function DashboardGateContent() {
     } catch (err: unknown) {
       console.error('Error selecting role:', err)
       setRoleError(sanitizeDatabaseError(err))
-      router.push(`/dashboard/${role}`)
     } finally {
       setUpdating(null)
     }

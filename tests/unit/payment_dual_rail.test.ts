@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   convertPhpToUsdc,
   uuidToBytes32,
@@ -64,7 +64,7 @@ describe('Dual-Rail Payment Architecture Unit Tests', () => {
     });
 
     it('should have complete ABI containing all required escrow functions', () => {
-      const functionNames = SUBUKAN_ESCROW_ABI.map((item: any) => item.name);
+      const functionNames = SUBUKAN_ESCROW_ABI.map((item: { name: string }) => item.name);
       expect(functionNames).toContain('createCampaign');
       expect(functionNames).toContain('releaseSlotPayout');
       expect(functionNames).toContain('refundRemaining');

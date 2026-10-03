@@ -32,7 +32,7 @@ describe('Auto-Release Cron API Route Integration Tests (GET /api/cron/auto-rele
 
   describe('Authorization & Security Handling', () => {
     it('should return 401 when CRON_SECRET is configured, NODE_ENV is production, and invalid headers sent', async () => {
-      (process.env as any).NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       process.env.CRON_SECRET = 'super-secret-cron-token';
 
       const req = new NextRequest('http://localhost:3000/api/cron/auto-release', {
@@ -50,7 +50,7 @@ describe('Auto-Release Cron API Route Integration Tests (GET /api/cron/auto-rele
     });
 
     it('should pass authorization when correct Bearer CRON_SECRET is provided', async () => {
-      (process.env as any).NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       process.env.CRON_SECRET = 'super-secret-cron-token';
 
       mockFrom.mockImplementation((table: string) => {
@@ -80,21 +80,8 @@ describe('Auto-Release Cron API Route Integration Tests (GET /api/cron/auto-rele
       expect(json.success).toBe(true);
     });
 
-    it('should pass authorization when x-vercel-cron header is set', async () => {
-      (process.env as any).NODE_ENV = 'production';
-
-      mockFrom.mockImplementation((table: string) => {
-        if (table === 'submissions') {
-          return {
-            select: () => ({
-              eq: () => ({
-                lte: async () => ({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
-        return {};
-      });
+    it('should reject authorization when unverified x-vercel-cron header is set without valid Bearer secret in production', async () => {
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
 
       const req = new NextRequest('http://localhost:3000/api/cron/auto-release', {
         method: 'GET',
@@ -106,8 +93,8 @@ describe('Auto-Release Cron API Route Integration Tests (GET /api/cron/auto-rele
       const res = await GET(req);
       const json = await res.json();
 
-      expect(res.status).toBe(200);
-      expect(json.success).toBe(true);
+      expect(res.status).toBe(401);
+      expect(json.error).toContain('Unauthorized');
     });
   });
 

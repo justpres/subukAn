@@ -5,6 +5,8 @@ import { verifyWebhookSignature } from '@/lib/payment/paymongo';
 import { POST as webhookPost } from '@/app/api/webhooks/paymongo/route';
 import { POST as payoutPost } from '@/app/api/payout/route';
 import { GET as cronGet } from '@/app/api/cron/auto-release/route';
+import { validateUploadFile } from '@/lib/validation/schemas';
+import { SUBUKAN_ESCROW_ABI } from '@/lib/web3/escrow';
 
 // Mocks for Supabase Admin in route tests
 const mockGetUser = vi.fn();
@@ -136,6 +138,67 @@ describe('Enterprise Security Hardening Unit Tests', () => {
                   data: {
                     id: listingId,
                     total_budget: 100, // ₱100 -> requires 10000 cents
+                    status: 'open',
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      const req = new NextRequest('http://localhost:3000/api/webhooks/paymongo', {
+        method: 'POST',
+        headers: {
+          'paymongo-signature': `t=${nowInSeconds},te=${signature}`,
+          'Content-Type': 'application/json',
+        },
+        body: webhookBody,
+      });
+
+      const res = await webhookPost(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(json.error).toContain('Payment amount does not match listing total budget');
+    });
+
+    it('should reject payment webhook when paid amount attribute is missing or undefined', async () => {
+      process.env.PAYMONGO_WEBHOOK_SIGNING_SECRET = 'whsec_test';
+      const listingId = '123e4567-e89b-12d3-a456-426614174000';
+
+      const webhookBody = JSON.stringify({
+        data: {
+          attributes: {
+            type: 'payment.paid',
+            data: {
+              id: 'pay_999',
+              attributes: {
+                reference_number: listingId,
+                // amount attribute is omitted!
+              },
+            },
+          },
+        },
+      });
+
+      const nowInSeconds = Math.floor(Date.now() / 1000).toString();
+      const signature = crypto
+        .createHmac('sha256', 'whsec_test')
+        .update(`${nowInSeconds}.${webhookBody}`)
+        .digest('hex');
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'listings') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: listingId,
+                    total_budget: 100,
                     status: 'open',
                   },
                   error: null,
@@ -389,7 +452,7 @@ describe('Enterprise Security Hardening Unit Tests', () => {
   // =========================================================================
   describe('Cron Auto-Release Secret Verification', () => {
     it('should reject request when CRON_SECRET is set, even if x-vercel-cron: true is forged', async () => {
-      (process.env as any).NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       process.env.CRON_SECRET = 'ultra-secure-cron-secret-12345';
 
       // Attacker sends x-vercel-cron: true without Bearer secret
@@ -407,8 +470,26 @@ describe('Enterprise Security Hardening Unit Tests', () => {
       expect(json.error).toContain('Unauthorized');
     });
 
+    it('should reject request when CRON_SECRET is not configured in production even if x-vercel-cron: true is sent', async () => {
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+      delete process.env.CRON_SECRET;
+
+      const req = new NextRequest('http://localhost:3000/api/cron/auto-release', {
+        method: 'GET',
+        headers: {
+          'x-vercel-cron': 'true',
+        },
+      });
+
+      const res = await cronGet(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(401);
+      expect(json.error).toContain('Unauthorized');
+    });
+
     it('should reject request when Bearer token length or value does not match timing-safely', async () => {
-      (process.env as any).NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       process.env.CRON_SECRET = 'ultra-secure-cron-secret-12345';
 
       const req = new NextRequest('http://localhost:3000/api/cron/auto-release', {
@@ -426,7 +507,7 @@ describe('Enterprise Security Hardening Unit Tests', () => {
     });
 
     it('should pass authorization when Bearer token matches CRON_SECRET exactly', async () => {
-      (process.env as any).NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       process.env.CRON_SECRET = 'ultra-secure-cron-secret-12345';
 
       mockFrom.mockImplementation((table: string) => {
@@ -461,48 +542,35 @@ describe('Enterprise Security Hardening Unit Tests', () => {
   // 5. Upload Route Strict Extension & MIME Validation Logic
   // =========================================================================
   describe('Uploads Gateway MIME & Extension Logic', () => {
-    // Inline replication of the validateFile logic tested directly
-    function validateFile(filename: string, fileType: string, fileSize: number) {
-      const MAX_FILE_SIZE = 100 * 1024 * 1024;
-      const ALLOWED_EXTENSIONS = ['webm', 'mp4', 'png', 'jpeg', 'jpg'];
-      const ALLOWED_MIME_TYPES = ['video/webm', 'video/mp4', 'image/png', 'image/jpeg', 'image/jpg'];
-
-      if (fileSize > MAX_FILE_SIZE) {
-        return { valid: false, error: 'File size exceeds maximum limit of 100MB' };
-      }
-
-      const extension = filename.split('.').pop()?.toLowerCase();
-      const isAllowedExt = extension && ALLOWED_EXTENSIONS.includes(extension);
-      const isAllowedMime = ALLOWED_MIME_TYPES.includes(fileType.toLowerCase());
-
-      if (!isAllowedExt || !isAllowedMime) {
-        return {
-          valid: false,
-          error: 'Invalid file type. Allowed types are webm, mp4, png, jpeg.',
-        };
-      }
-
-      return { valid: true };
-    }
-
     it('should reject file with spoofed MIME type but executable extension', () => {
-      const result = validateFile('exploit.exe', 'image/png', 5000);
+      const result = validateUploadFile('exploit.exe', 'image/png', 5000);
       expect(result.valid).toBe(false);
       expect(result.error).toContain('Invalid file type');
     });
 
     it('should reject file with valid extension but malicious executable MIME type', () => {
-      const result = validateFile('screenshot.png', 'application/x-msdownload', 5000);
+      const result = validateUploadFile('screenshot.png', 'application/x-msdownload', 5000);
       expect(result.valid).toBe(false);
       expect(result.error).toContain('Invalid file type');
     });
 
     it('should accept file with matching valid extension and valid MIME type', () => {
-      const pngResult = validateFile('screenshot.png', 'image/png', 5000);
+      const pngResult = validateUploadFile('screenshot.png', 'image/png', 5000);
       expect(pngResult.valid).toBe(true);
 
-      const mp4Result = validateFile('recording.mp4', 'video/mp4', 500000);
+      const mp4Result = validateUploadFile('recording.mp4', 'video/mp4', 500000);
       expect(mp4Result.valid).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // 6. Web3 Escrow Contract Hardening
+  // =========================================================================
+  describe('Web3 Escrow Contract Hardening', () => {
+    it('should contain registerSubmission and deregisterSubmission in SUBUKAN_ESCROW_ABI', () => {
+      const functionNames = SUBUKAN_ESCROW_ABI.map((item: { name: string }) => item.name);
+      expect(functionNames).toContain('registerSubmission');
+      expect(functionNames).toContain('deregisterSubmission');
     });
   });
 });

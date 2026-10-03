@@ -209,6 +209,9 @@ contract SubukanEscrow is Ownable2Step, ReentrancyGuard, Pausable {
     // Mapping of submissionId => bool to prevent double-spending
     mapping(bytes32 => bool) public processedSubmissions;
 
+    // Mapping of submissionId => bool to track registered active submissions idempotently
+    mapping(bytes32 => bool) public registeredSubmissions;
+
     // Mapping of listingId => active submissions count in progress or review
     mapping(bytes32 => uint256) public activeSubmissions;
 
@@ -217,6 +220,7 @@ contract SubukanEscrow is Ownable2Step, ReentrancyGuard, Pausable {
     event CampaignRefunded(bytes32 indexed listingId, address indexed poster, uint256 refundedAmount);
     event DisputeResolved(bytes32 indexed listingId, bytes32 indexed submissionId, address recipient, uint256 amount);
     event SubmissionRegistered(bytes32 indexed listingId, bytes32 indexed submissionId);
+    event SubmissionDeregistered(bytes32 indexed listingId, bytes32 indexed submissionId);
     event ArbiterUpdated(address indexed previousArbiter, address indexed newArbiter);
 
     modifier onlyPoster(bytes32 listingId) {
@@ -309,10 +313,29 @@ contract SubukanEscrow is Ownable2Step, ReentrancyGuard, Pausable {
         require(c.poster != address(0), "SubukanEscrow: Campaign does not exist");
         require(!c.isCancelled, "SubukanEscrow: Campaign cancelled");
         require(!processedSubmissions[submissionId], "SubukanEscrow: Submission already processed");
+        require(!registeredSubmissions[submissionId], "SubukanEscrow: Submission already registered");
         require(msg.sender == c.poster || msg.sender == platformArbiter || msg.sender == owner(), "SubukanEscrow: Unauthorized");
 
+        registeredSubmissions[submissionId] = true;
         activeSubmissions[listingId] += 1;
         emit SubmissionRegistered(listingId, submissionId);
+    }
+
+    /**
+     * @notice Deregisters an active submission if rejected or expired, decrementing active count.
+     */
+    function deregisterSubmission(bytes32 listingId, bytes32 submissionId) external {
+        Campaign storage c = campaigns[listingId];
+        require(c.poster != address(0), "SubukanEscrow: Campaign does not exist");
+        require(registeredSubmissions[submissionId], "SubukanEscrow: Submission not registered");
+        require(!processedSubmissions[submissionId], "SubukanEscrow: Submission already processed");
+        require(msg.sender == c.poster || msg.sender == platformArbiter || msg.sender == owner(), "SubukanEscrow: Unauthorized");
+
+        registeredSubmissions[submissionId] = false;
+        if (activeSubmissions[listingId] > 0) {
+            activeSubmissions[listingId] -= 1;
+        }
+        emit SubmissionDeregistered(listingId, submissionId);
     }
 
     /**
@@ -346,6 +369,9 @@ contract SubukanEscrow is Ownable2Step, ReentrancyGuard, Pausable {
         require(tester != address(0), "SubukanEscrow: Invalid tester address");
 
         processedSubmissions[submissionId] = true;
+        if (registeredSubmissions[submissionId]) {
+            registeredSubmissions[submissionId] = false;
+        }
         c.slotsApproved += 1;
         c.totalEscrow -= c.slotRate;
 
@@ -393,6 +419,9 @@ contract SubukanEscrow is Ownable2Step, ReentrancyGuard, Pausable {
         require(recipient != address(0), "SubukanEscrow: Invalid recipient address");
 
         processedSubmissions[submissionId] = true;
+        if (registeredSubmissions[submissionId]) {
+            registeredSubmissions[submissionId] = false;
+        }
         c.totalEscrow -= amount;
 
         if (activeSubmissions[listingId] > 0) {

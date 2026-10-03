@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       const expectedAmountInCents = Math.round(listing.total_budget * 100);
       const paidAmountInCents = attributes?.amount;
 
-      if (typeof paidAmountInCents === 'number' && paidAmountInCents !== expectedAmountInCents) {
+      if (typeof paidAmountInCents !== 'number' || paidAmountInCents !== expectedAmountInCents) {
         console.error(
           `Security Alert: Payment amount mismatch for listing ${listingId}. Expected: ${expectedAmountInCents}, Received: ${paidAmountInCents}`
         );

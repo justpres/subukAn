@@ -11,14 +11,23 @@ set search_path = public
 language plpgsql as $$
 begin
   if auth.role() != 'service_role' then
-    if new.is_admin is distinct from old.is_admin then
-      raise exception 'Administrative privilege escalation prohibited.';
-    end if;
-    if new.phone_verified is distinct from old.phone_verified then
-      raise exception 'Direct phone verification tampering prohibited.';
-    end if;
-    if old.role is not null and new.role is distinct from old.role then
-      raise exception 'Role switching is prohibited. Account role is immutable.';
+    if tg_op = 'INSERT' then
+      if new.is_admin is true then
+        raise exception 'Administrative privilege escalation prohibited.';
+      end if;
+      if new.phone_verified is true then
+        raise exception 'Direct phone verification tampering prohibited.';
+      end if;
+    elsif tg_op = 'UPDATE' then
+      if new.is_admin is distinct from old.is_admin then
+        raise exception 'Administrative privilege escalation prohibited.';
+      end if;
+      if new.phone_verified is distinct from old.phone_verified then
+        raise exception 'Direct phone verification tampering prohibited.';
+      end if;
+      if old.role is not null and new.role is distinct from old.role then
+        raise exception 'Role switching is prohibited. Account role is immutable.';
+      end if;
     end if;
   end if;
   return new;
@@ -27,7 +36,7 @@ $$;
 
 drop trigger if exists trg_protect_profile_invariants on public.profiles;
 create trigger trg_protect_profile_invariants
-  before update on public.profiles
+  before insert or update on public.profiles
   for each row
   execute function public.protect_profile_invariants();
 
@@ -111,7 +120,7 @@ declare
   listing_poster uuid;
 begin
   select poster_id into listing_poster from public.listings where id = new.listing_id;
-  if listing_poster is not null and listing_poster = new.tester_id then
+  if listing_poster is not null and (listing_poster = new.tester_id or listing_poster = auth.uid()) then
     raise exception 'Self-dealing prohibited: posters cannot submit to their own listings.';
   end if;
   return new;
@@ -150,7 +159,7 @@ begin
   select count(*) into current_active
   from public.submissions
   where listing_id = new.listing_id
-  and status not in ('expired');
+  and status not in ('expired', 'rejected');
 
   if current_active >= max_slots then
     raise exception 'All tester slots for this campaign have already been claimed.';

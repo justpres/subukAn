@@ -221,7 +221,7 @@ export default function SubmissionReviewPage({ params }: PageProps) {
         }
 
         // Sort responses by order index
-        const sorted = respData ? [...respData].sort((a: any, b: any) => {
+        const sorted = respData ? [...respData].sort((a: { task?: { order_index?: number } }, b: { task?: { order_index?: number } }) => {
           const aIndex = a.task?.order_index ?? 0
           const bIndex = b.task?.order_index ?? 0
           return aIndex - bIndex
@@ -707,7 +707,7 @@ export default function SubmissionReviewPage({ params }: PageProps) {
                   <div>
                     <span className="text-xs text-gray-400 block font-semibold uppercase tracking-wider">A/B Testing Variant</span>
                     {(() => {
-                      const variant = listing.variants.find((v: any) => v.id === submission.assigned_variant_id);
+                      const variant = listing.variants.find((v: { id: string; title: string }) => v.id === submission.assigned_variant_id);
                       return (
                         <span className="inline-flex items-center gap-1.5 text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-[6px] border border-purple-100 font-semibold mt-1">
                           {variant ? variant.title : submission.assigned_variant_id}
