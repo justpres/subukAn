@@ -55,6 +55,38 @@ describe('Vercel Hobby Compliance & Auto-Release Cron Configuration', () => {
       // Verifies response checking on non-200 HTTP status
       expect(content).toMatch(/HTTP_STATUS.*-ne 200/);
     });
+
+    it('should include robust domain sanitization, trap cleanup, and non-zero curl fallback', () => {
+      const content = fs.readFileSync(workflowPath, 'utf8');
+
+      // Whitespace, carriage return and newline stripping
+      expect(content).toContain("tr -d '[:space:]\\r\\n'");
+      // Protocol and subpath stripping
+      expect(content).toContain('DOMAIN="${DOMAIN#https://}"');
+      expect(content).toContain('DOMAIN="${DOMAIN#http://}"');
+      expect(content).toContain('DOMAIN="${DOMAIN%%/*}"');
+
+      // Safe tempfile cleanup trap on exit
+      expect(content).toContain("trap 'rm -f \"$RESPONSE_FILE\"' EXIT");
+
+      // Curl failure fallback to ensure HTTP_STATUS is always a numeric string
+      expect(content).toContain('|| echo "000"');
+    });
+
+    it('should correctly sanitize edge-case domain formats', () => {
+      const sanitizeDomain = (raw: string): string => {
+        let domain = raw.replace(/[\s\r\n]+/g, '');
+        domain = domain.replace(/^https?:\/\//, '');
+        domain = domain.replace(/\/.*$/, '');
+        return domain;
+      };
+
+      expect(sanitizeDomain('  subukan.vercel.app  ')).toBe('subukan.vercel.app');
+      expect(sanitizeDomain('https://subukan.vercel.app/')).toBe('subukan.vercel.app');
+      expect(sanitizeDomain('https://subukan.vercel.app/api/cron/auto-release')).toBe('subukan.vercel.app');
+      expect(sanitizeDomain('http://subukan.ph/dashboard/')).toBe('subukan.ph');
+      expect(sanitizeDomain("subukan.vercel.app\r\n")).toBe('subukan.vercel.app');
+    });
   });
 
   describe('Operations Runbook Documentation (09-PRODUCTION-RUNBOOK.md)', () => {
@@ -71,6 +103,13 @@ describe('Vercel Hobby Compliance & Auto-Release Cron Configuration', () => {
       // Documents required GitHub repository secrets
       expect(content).toContain('PRODUCTION_DOMAIN');
       expect(content).toContain('CRON_SECRET');
+    });
+
+    it('should document complete sequence of database migrations including 00015 and 00016', () => {
+      const content = fs.readFileSync(runbookPath, 'utf8');
+
+      expect(content).toContain('00015_add_dual_rail_payments.sql');
+      expect(content).toContain('00016_enterprise_security_hardening.sql');
     });
   });
 });

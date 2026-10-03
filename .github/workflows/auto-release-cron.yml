@@ -13,27 +13,37 @@ jobs:
     steps:
       - name: Validate Secrets Configuration
         run: |
-          if [ -z "${{ secrets.PRODUCTION_DOMAIN }}" ]; then
+          TRIMMED_DOMAIN=$(echo "${{ secrets.PRODUCTION_DOMAIN }}" | tr -d '[:space:]\r\n')
+          if [ -z "$TRIMMED_DOMAIN" ]; then
             echo "::error::PRODUCTION_DOMAIN secret is not configured in repository secrets."
             exit 1
           fi
-          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+          TRIMMED_SECRET=$(echo "${{ secrets.CRON_SECRET }}" | tr -d '[:space:]\r\n')
+          if [ -z "$TRIMMED_SECRET" ]; then
             echo "::error::CRON_SECRET secret is not configured in repository secrets."
             exit 1
           fi
 
       - name: Dispatch Auto-Release Cron Request
         run: |
-          # Sanitize domain in case scheme or trailing slashes were provided in secret
-          DOMAIN="${{ secrets.PRODUCTION_DOMAIN }}"
+          # Sanitize domain: trim whitespace, strip protocol scheme, and strip trailing slash or paths
+          RAW_DOMAIN="${{ secrets.PRODUCTION_DOMAIN }}"
+          DOMAIN=$(echo "$RAW_DOMAIN" | tr -d '[:space:]\r\n')
           DOMAIN="${DOMAIN#https://}"
           DOMAIN="${DOMAIN#http://}"
-          DOMAIN="${DOMAIN%/}"
+          DOMAIN="${DOMAIN%%/*}"
+
+          if [ -z "$DOMAIN" ]; then
+            echo "::error::Resolved domain is empty after sanitization."
+            exit 1
+          fi
 
           ENDPOINT="https://${DOMAIN}/api/cron/auto-release"
           echo "Dispatching cron trigger to: $ENDPOINT"
 
           RESPONSE_FILE=$(mktemp)
+          trap 'rm -f "$RESPONSE_FILE"' EXIT
+
           HTTP_STATUS=$(curl -sS -X GET "$ENDPOINT" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "User-Agent: Subukan-GitHub-Cron/1.0" \
@@ -42,18 +52,16 @@ jobs:
             --connect-timeout 15 \
             --max-time 60 \
             --retry 2 \
-            --retry-delay 5)
+            --retry-delay 5 || echo "000")
 
           echo "Response HTTP Status: $HTTP_STATUS"
           echo "Response Body:"
-          cat "$RESPONSE_FILE"
+          cat "$RESPONSE_FILE" 2>/dev/null || true
           echo ""
 
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "::error::Auto-release cron invocation failed with HTTP status $HTTP_STATUS"
-            rm -f "$RESPONSE_FILE"
             exit 1
           fi
 
-          rm -f "$RESPONSE_FILE"
           echo "Escrow auto-release cycle successfully processed."

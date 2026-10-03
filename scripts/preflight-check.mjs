@@ -160,7 +160,7 @@ async function runPreflight() {
   // 6. Cron Secret
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret || cronSecret.includes('your_cron_secret')) {
-    recordCheck('Cron Secret', 'WARN', 'CRON_SECRET is not configured (Will rely on x-vercel-cron header in production)');
+    recordCheck('Cron Secret', 'WARN', 'CRON_SECRET is not configured (Production auto-release endpoint requires CRON_SECRET Bearer token)');
   } else {
     recordCheck('Cron Secret', 'PASS', 'CRON_SECRET configured');
   }
