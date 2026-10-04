@@ -305,6 +305,12 @@ export async function GET(request: NextRequest, { params }: { params: { path?: s
       if (statusParam && statusParam.startsWith('eq.')) {
         const status = statusParam.substring(3);
         list = list.filter(l => l.status === status);
+      } else if (statusParam && statusParam.startsWith('in.')) {
+        const allowed = statusParam
+          .replace(/^in\.\(|\)$/g, '')
+          .split(',')
+          .map(s => s.trim().replace(/^["']|["']$/g, ''));
+        list = list.filter(l => l.status && allowed.includes(l.status));
       }
       if (posterParam && posterParam.startsWith('eq.')) {
         const posterId = posterParam.substring(3);

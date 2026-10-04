@@ -68,7 +68,7 @@ export default function Home() {
         const { data } = await supabase
           .from('listings')
           .select('id, title, description, rate_per_tester, slots_count, status, submissions(id, status)')
-          .eq('status', 'open')
+          .in('status', ['open', 'filling'])
           .order('created_at', { ascending: false })
           .limit(6)
 

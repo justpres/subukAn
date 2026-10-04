@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { modalBackdropVariants, modalContentVariants } from '@/lib/utils/motion'
@@ -33,6 +33,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 import { JobListing, getButtonConfig } from '@/lib/utils/claim-button'
 import { formatRejectionReason, formatDisputeReason } from '@/lib/utils/workspace-status'
+import { filterListingsByDemographics, isProfileDemographicsIncomplete } from '@/lib/utils/demographics'
 import { UserProfile } from '@/types'
 import dynamic from 'next/dynamic'
 import { LineChart } from '@tremor/react'
@@ -103,7 +104,13 @@ function TesterDashboardContent() {
     setCopiedText(type)
     setTimeout(() => setCopiedText(null), 1500)
   }
-  const [listings, setListings] = useState<JobListing[]>([])
+  const [rawListings, setRawListings] = useState<JobListing[]>([])
+
+  const { matchedListings, unmatchedCount } = useMemo(() => {
+    return filterListingsByDemographics(rawListings, profile)
+  }, [rawListings, profile])
+
+  const listings = matchedListings
   const [submissions, setSubmissions] = useState<SubmissionRecord[]>([])
   const [payouts, setPayouts] = useState<PayoutRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -142,15 +149,19 @@ function TesterDashboardContent() {
     router.push(`/dashboard/tester?tab=${tab}`, { scroll: false })
   }
 
-  const fetchProfileAndListings = useCallback(async () => {
-    setLoading(true)
-    setLoadingError(null)
+  const fetchProfileAndListings = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true)
+      setLoadingError(null)
+    }
 
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
-        setLoadingError('Authentication required.')
-        setLoading(false)
+        if (!silent) {
+          setLoadingError('Authentication required.')
+          setLoading(false)
+        }
         return
       }
 
@@ -203,8 +214,10 @@ function TesterDashboardContent() {
       }
 
       if (profileError || !profileData) {
-        setLoadingError(sanitizeDatabaseError(profileError, 'Failed to retrieve user profile.'))
-        setLoading(false)
+        if (!silent) {
+          setLoadingError(sanitizeDatabaseError(profileError, 'Failed to retrieve user profile.'))
+          setLoading(false)
+        }
         return
       }
 
@@ -290,7 +303,7 @@ function TesterDashboardContent() {
         setSubmissions([])
       }
 
-      // 3. Fetch open listings
+      // 3. Fetch open and filling listings
       const { data: listingsData, error: listingsError } = await supabase
         .from('listings')
         .select(`
@@ -306,10 +319,15 @@ function TesterDashboardContent() {
             status
           )
         `)
-        .eq('status', 'open')
+        .in('status', ['open', 'filling'])
+        .order('created_at', { ascending: false })
 
       if (listingsError) {
-        setLoadingError(sanitizeDatabaseError(listingsError, 'Failed to load listings.'))
+        if (!silent) {
+          setLoadingError(sanitizeDatabaseError(listingsError, 'Failed to load listings.'))
+        } else {
+          console.warn('Silent listings fetch error:', listingsError)
+        }
       } else {
         let userSubmissions: { id: string; listing_id: string; status: string }[] = []
         try {
@@ -325,10 +343,35 @@ function TesterDashboardContent() {
           console.warn('Could not fetch user submissions:', err)
         }
 
-        const mapped = (listingsData || []).map((listing: any) => {
+        interface ListingRow {
+          id: string
+          title: string
+          description: string
+          rate_per_tester: number
+          slots_count: number
+          is_quick_impression?: boolean
+          target_age_group?: string | null
+          target_gender?: string | null
+          target_employment_status?: string | null
+          target_tech_literacy?: string | null
+          target_accessibility_tags?: string[] | null
+          site_url?: string | null
+          tasks?: Array<{
+            id: string
+            question_text?: string | null
+            requires_recording?: boolean | null
+            requires_image?: boolean | null
+          }>
+          submissions?: Array<{
+            id: string
+            status: string
+          }>
+        }
+
+        const mapped: JobListing[] = ((listingsData as unknown as ListingRow[]) || []).map((listing) => {
           const firstTask = listing.tasks?.[0]
           const userSub = userSubmissions.find((s) => s.listing_id === listing.id)
-          const userSubmissionStatus = (userSub ? userSub.status : null) as any
+          const userSubmissionStatus = (userSub ? userSub.status : null) as JobListing['user_submission_status']
 
           return {
             id: listing.id,
@@ -337,12 +380,12 @@ function TesterDashboardContent() {
             rate_per_tester: listing.rate_per_tester,
             slots_count: listing.slots_count,
             slots_filled: listing.submissions 
-              ? listing.submissions.filter((s: any) => s.status !== 'expired' && s.status !== 'rejected').length 
+              ? listing.submissions.filter((s) => s.status !== 'expired' && s.status !== 'rejected').length 
               : 0,
-            requires_recording: listing.tasks?.some((t: any) => t.requires_recording) || false,
-            requires_image: listing.tasks?.some((t: any) => t.requires_image) || false,
+            requires_recording: listing.tasks?.some((t) => Boolean(t.requires_recording)) || false,
+            requires_image: listing.tasks?.some((t) => Boolean(t.requires_image)) || false,
             question_text: firstTask?.question_text || 'Provide feedback on this design.',
-            is_quick_impression: listing.is_quick_impression,
+            is_quick_impression: Boolean(listing.is_quick_impression),
             target_age_group: listing.target_age_group,
             target_gender: listing.target_gender,
             target_employment_status: listing.target_employment_status,
@@ -353,34 +396,77 @@ function TesterDashboardContent() {
           }
         })
 
-        // Filter based on demographic match
-        const filtered = mapped.filter((listing: any) => {
-          if (listing.target_age_group && listing.target_age_group !== profileData?.age_group) return false
-          if (listing.target_gender && listing.target_gender !== profileData?.gender) return false
-          if (listing.target_employment_status && listing.target_employment_status !== profileData?.employment_status) return false
-          if (listing.target_tech_literacy && listing.target_tech_literacy !== profileData?.tech_literacy) return false
-          
-          if (listing.target_accessibility_tags && listing.target_accessibility_tags.length > 0) {
-            const testerTags = profileData?.accessibility_tags || []
-            const matchesAll = listing.target_accessibility_tags.every((tag: string) => testerTags.includes(tag))
-            if (!matchesAll) return false
-          }
-          return true
-        })
-
-        setListings(filtered)
+        setRawListings(mapped)
       }
     } catch (err) {
-      setLoadingError(sanitizeDatabaseError(err, 'An error occurred.'))
+      if (!silent) {
+        setLoadingError(sanitizeDatabaseError(err, 'An error occurred.'))
+      } else {
+        console.warn('Background sync error:', err)
+      }
     } finally {
-      setLoading(false)
-      setIsInitialLoad(false)
+      if (!silent) {
+        setLoading(false)
+        setIsInitialLoad(false)
+      }
     }
   }, [supabase])
 
   useEffect(() => {
-    fetchProfileAndListings()
-  }, [fetchProfileAndListings])
+    fetchProfileAndListings(false)
+
+    // 1. Supabase Realtime channel subscription
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      channel = supabase
+        .channel('public:listings')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'listings' },
+          () => {
+            fetchProfileAndListings(true)
+          }
+        )
+        .subscribe()
+    } catch (err) {
+      console.warn('Supabase Realtime subscription error:', err)
+    }
+
+    // 2. Periodic background heartbeat polling (every 15 seconds) when tab is active
+    const pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchProfileAndListings(true)
+      }
+    }, 15000)
+
+    // 3. Tab focus and visibilitychange event listeners for instant re-fetch upon tab return
+    const handleVisibilityOrFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchProfileAndListings(true)
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('visibilitychange', handleVisibilityOrFocus)
+      window.addEventListener('focus', handleVisibilityOrFocus)
+    }
+
+    // Complete cleanup on component unmount
+    return () => {
+      if (channel) {
+        try {
+          supabase.removeChannel(channel)
+        } catch (err) {
+          console.warn('Error removing Realtime channel:', err)
+        }
+      }
+      clearInterval(pollInterval)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+        window.removeEventListener('focus', handleVisibilityOrFocus)
+      }
+    }
+  }, [supabase, fetchProfileAndListings])
 
   const handleUpdateProfile = async (updatedData: Partial<UserProfile>) => {
     if (!profile?.id) return
@@ -483,7 +569,7 @@ function TesterDashboardContent() {
 
   // Active Task Resolution
   const activeSubmission = submissions.find(s => s.status === 'in_progress')
-  const activeJob = listings.find(l => l.user_submission_status === 'in_progress' || (activeSubmission && l.id === activeSubmission.listing_id))
+  const activeJob = rawListings.find(l => l.user_submission_status === 'in_progress' || (activeSubmission && l.id === activeSubmission.listing_id))
   const hasActiveTask = Boolean(activeSubmission || activeJob)
   const activeTaskTitle = activeJob?.title || activeSubmission?.listing_title || 'Active Test Session'
   const activeTaskHref = activeJob?.is_quick_impression 
@@ -670,14 +756,54 @@ function TesterDashboardContent() {
           </div>
 
           {listings.length === 0 ? (
-            <div className="bg-white border border-slate-200/80 rounded-xl p-12 text-center text-slate-500 shadow-xs space-y-2">
+            <div className="bg-white border border-slate-200/80 rounded-xl p-12 text-center text-slate-500 shadow-xs space-y-3">
               <p className="text-base font-bold text-slate-800">No open tests right now</p>
               <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                New testing opportunities are posted regularly. Check back shortly or verify your demographic settings above to receive targeted tests.
+                {unmatchedCount > 0
+                  ? `There ${unmatchedCount === 1 ? 'is' : 'are'} ${unmatchedCount} targeted testing ${unmatchedCount === 1 ? 'opportunity' : 'opportunities'} available. Complete or update your demographic profile to see if you qualify.`
+                  : 'New testing opportunities are posted regularly. Check back shortly or verify your demographic settings above to receive targeted tests.'}
               </p>
+              {unmatchedCount > 0 && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="px-4 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow-xs transition-colors"
+                  >
+                    Update Demographics Profile
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-xs divide-y divide-slate-100">
+            <>
+              {unmatchedCount > 0 && (
+                <div className="bg-blue-50/80 border border-blue-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100/80 text-[#2955E3] flex items-center justify-center shrink-0">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-blue-950">
+                        {unmatchedCount} additional {unmatchedCount === 1 ? 'test opportunity is' : 'test opportunities are'} available
+                      </p>
+                      <p className="text-blue-800/90 text-[11px] mt-0.5">
+                        {isProfileDemographicsIncomplete(profile)
+                          ? 'Complete your demographics profile to see if you qualify for targeted campaigns.'
+                          : 'These campaigns require specific demographic criteria. Update your profile if your details have changed.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold rounded-lg text-xs transition-colors shrink-0 shadow-xs self-start sm:self-auto"
+                  >
+                    Update Profile
+                  </button>
+                </div>
+              )}
+              <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-xs divide-y divide-slate-100">
               {listings.map((job) => {
                 const btnConfig = getButtonConfig(job)
                 const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
@@ -741,6 +867,7 @@ function TesterDashboardContent() {
                 )
               })}
             </div>
+            </>
           )}
         </div>
       )}
