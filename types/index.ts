@@ -57,6 +57,7 @@ export interface UserProfile {
   accessibility_tags?: string[];
   location?: string | null;
   device_types?: string[] | string | null;
+  device_type?: 'mobile' | 'desktop' | 'both' | null;
   crypto_wallet_address?: string | null;
   preferred_payout_rail?: 'gcash' | 'maya' | 'crypto_wallet';
   notification_settings?: NotificationSettings;

@@ -215,15 +215,63 @@ function TesterDashboardContent() {
               profileData = insertedData
               profileError = null
             } else {
-              profileData = { id: user.id, role: 'tester', age_group: '', gender: '', employment_status: '', tech_literacy: '', accessibility_tags: [] }
+              profileData = {
+                id: user.id,
+                role: 'tester',
+                age_group: '',
+                gender: '',
+                employment_status: '',
+                tech_literacy: '',
+                accessibility_tags: [],
+                location: 'Metro Manila',
+                device_types: ['Android Mobile', 'Windows PC'],
+                notification_settings: {
+                  email_payouts: true,
+                  email_submissions: true,
+                  email_listings: true,
+                  email_disputes: true
+                }
+              }
               profileError = null
             }
           } catch {
-            profileData = { id: user.id, role: 'tester', age_group: '', gender: '', employment_status: '', tech_literacy: '', accessibility_tags: [] }
+            profileData = {
+              id: user.id,
+              role: 'tester',
+              age_group: '',
+              gender: '',
+              employment_status: '',
+              tech_literacy: '',
+              accessibility_tags: [],
+              location: 'Metro Manila',
+              device_types: ['Android Mobile', 'Windows PC'],
+              notification_settings: {
+                email_payouts: true,
+                email_submissions: true,
+                email_listings: true,
+                email_disputes: true
+              }
+            }
             profileError = null
           }
         } else if (profileError.message?.includes('profiles') || profileError.message?.includes('schema cache')) {
-          profileData = { id: user.id, role: 'tester', age_group: '', gender: '', employment_status: '', tech_literacy: '', accessibility_tags: [] }
+          profileData = {
+            id: user.id,
+            role: 'tester',
+            age_group: '',
+            gender: '',
+            employment_status: '',
+            tech_literacy: '',
+            accessibility_tags: [],
+            location: 'Metro Manila',
+            device_types: ['Android Mobile', 'Windows PC'],
+            notification_settings: {
+              email_payouts: true,
+              email_submissions: true,
+              email_listings: true,
+              email_disputes: true
+            }
+          }
           profileError = null
         }
       }
@@ -238,7 +286,22 @@ function TesterDashboardContent() {
       }
 
       if (!isMountedRef.current || currentSeq !== fetchSeqRef.current) return
-      setProfile(profileData)
+      setProfile(prev => {
+        const merged: Partial<UserProfile> = {
+          ...prev,
+          ...profileData,
+        }
+        if (profileData.location !== undefined) {
+          merged.location = profileData.location
+        }
+        if (profileData.device_types !== undefined) {
+          merged.device_types = profileData.device_types
+        }
+        if (profileData.notification_settings !== undefined) {
+          merged.notification_settings = profileData.notification_settings
+        }
+        return merged
+      })
       if (profileData.phone) {
         setGcashNumber(profileData.phone)
       }
@@ -533,8 +596,40 @@ function TesterDashboardContent() {
         .update(updatedData)
         .eq('id', profile.id)
 
-      if (error && !error.message?.includes('profiles') && !error.message?.includes('schema cache')) {
-        throw error
+      if (error) {
+        // Check if error is specifically due to extended columns missing in older DB schema
+        const isExtendedColumnError =
+          error.message?.includes('device_types') ||
+          error.message?.includes('notification_settings') ||
+          error.message?.includes('location') ||
+          error.code === 'PGRST204' ||
+          (Boolean(error.message?.includes('schema cache')) && (
+            Boolean(error.message?.includes('column')) ||
+            Boolean(error.message?.includes('Could not find'))
+          ))
+
+        if (isExtendedColumnError) {
+          console.warn('Extended profile columns missing in DB schema cache. Falling back to core profile payload.', error)
+          const {
+            device_types: _dt,
+            location: _loc,
+            notification_settings: _ns,
+            ...legacyPayload
+          } = updatedData
+
+          const { error: fallbackError } = await supabase
+            .from('profiles')
+            .update(legacyPayload)
+            .eq('id', profile.id)
+
+          if (fallbackError) {
+            const sanitized = sanitizeDatabaseError(fallbackError, 'Failed to update profile settings.')
+            throw new Error(sanitized)
+          }
+        } else {
+          const sanitized = sanitizeDatabaseError(error, 'Failed to update profile settings.')
+          throw new Error(sanitized)
+        }
       }
 
       setProfile(prev => ({ ...prev, ...updatedData }))

@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { UserProfile, NotificationSettings } from '@/types'
+import { mapDeviceTypesToDeviceType, resolveInitialDeviceTypes, resolveInitialNotificationSettings } from '@/lib/utils/profile'
 import { User, Check, X, Shield, Smartphone, MapPin, Briefcase, Laptop, AlertCircle, Lock, FileText, ExternalLink, ShieldCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { modalBackdropVariants, modalContentVariants } from '@/lib/utils/motion'
@@ -41,35 +42,38 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
+  const initializedRef = useRef(false)
+
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (profile) {
+    if (!isOpen) {
+      initializedRef.current = false
+      return
+    }
+
+    // Only initialize form state when the modal transitions to open (or when profile first arrives while open)
+    // Background polling and refetches while the modal is open will not overwrite user edits
+    if (!initializedRef.current && profile) {
       setAgeGroup(profile.age_group || '')
       setGender(profile.gender || '')
       setLocation(profile.location || 'Metro Manila')
       setEmploymentStatus(profile.employment_status || '')
       setTechLiteracy(profile.tech_literacy || '')
       
-      if (Array.isArray(profile.device_types)) {
-        setDeviceTypes(profile.device_types)
-      } else if (typeof profile.device_types === 'string') {
-        setDeviceTypes([profile.device_types])
-      } else {
-        setDeviceTypes(['Android Mobile', 'Windows PC'])
-      }
-
-      setAccessibilityTags(profile.accessibility_tags || [])
+      setDeviceTypes(resolveInitialDeviceTypes(profile))
+      setAccessibilityTags(Array.isArray(profile.accessibility_tags) ? profile.accessibility_tags : [])
       setCryptoWalletAddress(profile.crypto_wallet_address || '')
       setPreferredPayoutRail(profile.preferred_payout_rail || 'gcash')
+      setNotificationSettings(resolveInitialNotificationSettings(profile))
 
-      if (profile.notification_settings) {
-        setNotificationSettings(profile.notification_settings)
-      }
+      setErrorMsg(null)
+      setSaveSuccess(false)
+      initializedRef.current = true
     }
-  }, [profile])
+  }, [isOpen, profile])
 
   if (!mounted) return null
 
@@ -89,6 +93,9 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
     e.preventDefault()
     setSaving(true)
     setSaveSuccess(false)
+    setErrorMsg(null)
+
+    const mappedDeviceType = mapDeviceTypesToDeviceType(deviceTypes)
 
     try {
       await onSaveProfile({
@@ -98,6 +105,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
         employment_status: employmentStatus || null,
         tech_literacy: techLiteracy || null,
         device_types: deviceTypes,
+        device_type: mappedDeviceType,
         accessibility_tags: accessibilityTags,
         crypto_wallet_address: cryptoWalletAddress || null,
         preferred_payout_rail: preferredPayoutRail,
@@ -108,9 +116,10 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
         setSaveSuccess(false)
         onClose()
       }, 1000)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update profile:', error)
-      setErrorMsg(error?.message || 'Failed to update profile settings. Please try again.')
+      const err = error as { message?: string }
+      setErrorMsg(err?.message || 'Failed to update profile settings. Please try again.')
     } finally {
       setSaving(false)
     }

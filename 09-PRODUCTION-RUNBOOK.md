@@ -44,6 +44,7 @@ graph LR
    - `supabase/migrations/00014_add_admin_and_dispute_resolution.sql`
    - `supabase/migrations/00015_add_dual_rail_payments.sql`
    - `supabase/migrations/00016_enterprise_security_hardening.sql`
+   - `supabase/migrations/00017_add_profile_extended_settings.sql`
 3. **Storage Bucket Provisioning**:
    - Navigate to **Storage** in the Supabase Dashboard.
    - Click **New Bucket**, name it `task-attachments`.

@@ -19,10 +19,24 @@ interface MockProfile {
   role?: string;
   full_name?: string;
   device_type?: string;
+  device_types?: string[];
+  location?: string | null;
+  notification_settings?: {
+    email_payouts: boolean;
+    email_submissions: boolean;
+    email_listings: boolean;
+    email_disputes: boolean;
+    [key: string]: boolean;
+  };
   tech_comfort_level?: string;
   phone_verified?: boolean;
   age_group?: string | null;
+  gender?: string | null;
+  employment_status?: string | null;
+  tech_literacy?: string | null;
   accessibility_tags?: string[];
+  crypto_wallet_address?: string | null;
+  preferred_payout_rail?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -153,6 +167,14 @@ if (!globalRef.mockDb) {
     role: 'poster',
     full_name: 'Test Poster',
     device_type: 'desktop',
+    device_types: ['Windows PC'],
+    location: 'Metro Manila',
+    notification_settings: {
+      email_payouts: true,
+      email_submissions: true,
+      email_listings: true,
+      email_disputes: true,
+    },
     tech_comfort_level: 'casual_user',
     phone_verified: true,
     created_at: new Date().toISOString(),
@@ -177,7 +199,9 @@ if (!globalRef.mockDb) {
     user_metadata: {
       role: 'tester',
       full_name: 'Test Tester',
-      device_type: 'desktop',
+      device_type: 'both',
+      device_types: ['Android Mobile', 'Windows PC'],
+      location: 'Metro Manila',
       tech_comfort_level: 'non_technical',
       phone_verified: true,
     },
@@ -187,7 +211,15 @@ if (!globalRef.mockDb) {
     id: 'user_mock_tester_id',
     role: 'tester',
     full_name: 'Test Tester',
-    device_type: 'desktop',
+    device_type: 'both',
+    device_types: ['Android Mobile', 'Windows PC'],
+    location: 'Metro Manila',
+    notification_settings: {
+      email_payouts: true,
+      email_submissions: true,
+      email_listings: true,
+      email_disputes: true,
+    },
     tech_comfort_level: 'non_technical',
     phone_verified: true,
     created_at: new Date().toISOString(),
@@ -445,6 +477,21 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
       role: body.user_metadata?.role || 'tester',
       full_name: body.user_metadata?.full_name || '',
       device_type: body.user_metadata?.device_type || 'desktop',
+      device_types: Array.isArray(body.user_metadata?.device_types)
+        ? body.user_metadata.device_types
+        : ['Android Mobile', 'Windows PC'],
+      location: (body.user_metadata?.location as string | undefined) || 'Metro Manila',
+      notification_settings: (body.user_metadata?.notification_settings as {
+        email_payouts: boolean;
+        email_submissions: boolean;
+        email_listings: boolean;
+        email_disputes: boolean;
+      } | undefined) || {
+        email_payouts: true,
+        email_submissions: true,
+        email_listings: true,
+        email_disputes: true,
+      },
       tech_comfort_level: body.user_metadata?.tech_comfort_level || 'casual_user',
       phone_verified: body.user_metadata?.phone_verified || true,
       age_group: body.user_metadata?.age_group || null,
@@ -492,16 +539,39 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
   if (path === 'rest/v1/profiles') {
     const data = body;
     const profileId = String(data.id || '');
+    const existing = db.profiles.get(profileId);
     const profile: MockProfile = {
       id: profileId,
-      role: String(data.role || 'tester'),
-      full_name: String(data.full_name || ''),
-      device_type: String(data.device_type || 'desktop'),
-      tech_comfort_level: String(data.tech_comfort_level || 'casual_user'),
-      phone_verified: Boolean(data.phone_verified ?? true),
-      age_group: data.age_group ? String(data.age_group) : null,
-      accessibility_tags: Array.isArray(data.accessibility_tags) ? data.accessibility_tags : [],
-      created_at: new Date().toISOString(),
+      role: String(data.role || existing?.role || 'tester'),
+      full_name: String(data.full_name || existing?.full_name || ''),
+      device_type: data.device_type !== undefined ? String(data.device_type) : (existing?.device_type || 'desktop'),
+      device_types: Array.isArray(data.device_types)
+        ? data.device_types
+        : (existing?.device_types || ['Android Mobile', 'Windows PC']),
+      location: data.location !== undefined ? (data.location ? String(data.location) : null) : (existing?.location ?? 'Metro Manila'),
+      notification_settings: (data.notification_settings as {
+        email_payouts: boolean;
+        email_submissions: boolean;
+        email_listings: boolean;
+        email_disputes: boolean;
+      } | undefined) || existing?.notification_settings || {
+        email_payouts: true,
+        email_submissions: true,
+        email_listings: true,
+        email_disputes: true,
+      },
+      tech_comfort_level: String(data.tech_comfort_level || existing?.tech_comfort_level || 'casual_user'),
+      phone_verified: Boolean(data.phone_verified ?? existing?.phone_verified ?? true),
+      age_group: data.age_group !== undefined ? (data.age_group ? String(data.age_group) : null) : (existing?.age_group || null),
+      gender: data.gender !== undefined ? (data.gender ? String(data.gender) : null) : (existing?.gender || null),
+      employment_status: data.employment_status !== undefined ? (data.employment_status ? String(data.employment_status) : null) : (existing?.employment_status || null),
+      tech_literacy: data.tech_literacy !== undefined ? (data.tech_literacy ? String(data.tech_literacy) : null) : (existing?.tech_literacy || null),
+      accessibility_tags: Array.isArray(data.accessibility_tags)
+        ? data.accessibility_tags
+        : (existing?.accessibility_tags || []),
+      crypto_wallet_address: data.crypto_wallet_address !== undefined ? (data.crypto_wallet_address ? String(data.crypto_wallet_address) : null) : (existing?.crypto_wallet_address || null),
+      preferred_payout_rail: data.preferred_payout_rail !== undefined ? String(data.preferred_payout_rail) : (existing?.preferred_payout_rail || 'gcash'),
+      created_at: existing?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     db.profiles.set(profileId, profile);
@@ -680,6 +750,26 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
           ...body,
           updated_at: new Date().toISOString(),
         };
+
+        // Explicitly preserve empty array for device_types if provided in body
+        if (Array.isArray(body.device_types)) {
+          updated.device_types = body.device_types;
+        }
+        if (body.location !== undefined) {
+          updated.location = body.location ? String(body.location) : null;
+        }
+        if (body.notification_settings !== undefined) {
+          updated.notification_settings = {
+            ...(profile.notification_settings || {
+              email_payouts: true,
+              email_submissions: true,
+              email_listings: true,
+              email_disputes: true,
+            }),
+            ...(body.notification_settings as Record<string, boolean>),
+          };
+        }
+
         db.profiles.set(id, updated);
         return NextResponse.json(getResponsePayload(updated, prefersObject));
       }
