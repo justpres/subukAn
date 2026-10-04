@@ -7,9 +7,12 @@ interface MockUser {
     role?: string;
     full_name?: string;
     device_type?: string;
+    device_types?: string[];
+    location?: string;
     tech_comfort_level?: string;
     phone_verified?: boolean;
     age_group?: string;
+    [key: string]: unknown;
   };
   created_at?: string;
 }
@@ -260,9 +263,12 @@ interface RequestBody {
     role?: string;
     full_name?: string;
     device_type?: string;
+    device_types?: string[];
+    location?: string;
     tech_comfort_level?: string;
     phone_verified?: boolean;
     age_group?: string;
+    [key: string]: unknown;
   };
   title?: string;
   description?: string;
