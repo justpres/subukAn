@@ -49,6 +49,7 @@ export interface UserProfile {
   id: string;
   role: 'poster' | 'tester';
   full_name?: string;
+  phone?: string | null;
   age_group?: string | null;
   gender?: string | null;
   employment_status?: string | null;

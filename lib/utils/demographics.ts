@@ -20,10 +20,10 @@ export interface DemographicFilterResult {
  */
 export function isListingTargeted(listing: DemographicTargetFields): boolean {
   return Boolean(
-    listing.target_age_group ||
-    listing.target_gender ||
-    listing.target_employment_status ||
-    listing.target_tech_literacy ||
+    (listing.target_age_group && listing.target_age_group !== 'all') ||
+    (listing.target_gender && listing.target_gender !== 'all') ||
+    (listing.target_employment_status && listing.target_employment_status !== 'all') ||
+    (listing.target_tech_literacy && listing.target_tech_literacy !== 'all') ||
     (listing.target_accessibility_tags && listing.target_accessibility_tags.length > 0)
   );
 }
@@ -36,16 +36,16 @@ export function matchesDemographics(
   listing: DemographicTargetFields,
   profile: Partial<UserProfile> | null | undefined
 ): boolean {
-  if (listing.target_age_group && listing.target_age_group !== profile?.age_group) {
+  if (listing.target_age_group && listing.target_age_group !== 'all' && listing.target_age_group !== profile?.age_group) {
     return false;
   }
-  if (listing.target_gender && listing.target_gender !== profile?.gender) {
+  if (listing.target_gender && listing.target_gender !== 'all' && listing.target_gender !== profile?.gender) {
     return false;
   }
-  if (listing.target_employment_status && listing.target_employment_status !== profile?.employment_status) {
+  if (listing.target_employment_status && listing.target_employment_status !== 'all' && listing.target_employment_status !== profile?.employment_status) {
     return false;
   }
-  if (listing.target_tech_literacy && listing.target_tech_literacy !== profile?.tech_literacy) {
+  if (listing.target_tech_literacy && listing.target_tech_literacy !== 'all' && listing.target_tech_literacy !== profile?.tech_literacy) {
     return false;
   }
   if (listing.target_accessibility_tags && listing.target_accessibility_tags.length > 0) {
@@ -87,7 +87,7 @@ export function filterListingsByDemographics(
   for (const listing of listings) {
     if (matchesDemographics(listing, profile)) {
       matchedListings.push(listing);
-    } else {
+    } else if (isListingTargeted(listing)) {
       unmatchedListings.push(listing);
     }
   }

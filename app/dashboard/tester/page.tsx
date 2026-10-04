@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { modalBackdropVariants, modalContentVariants } from '@/lib/utils/motion'
@@ -33,7 +33,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 import { JobListing, getButtonConfig } from '@/lib/utils/claim-button'
 import { formatRejectionReason, formatDisputeReason } from '@/lib/utils/workspace-status'
-import { filterListingsByDemographics, isProfileDemographicsIncomplete } from '@/lib/utils/demographics'
+import { filterListingsByDemographics, isProfileDemographicsIncomplete, isListingTargeted } from '@/lib/utils/demographics'
 import { UserProfile } from '@/types'
 import dynamic from 'next/dynamic'
 import { LineChart } from '@tremor/react'
@@ -118,8 +118,16 @@ function TesterDashboardContent() {
   const [loadingError, setLoadingError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
+  const isMountedRef = useRef(true)
+  const isFetchingRef = useRef(false)
+  const fetchSeqRef = useRef(0)
+
   useEffect(() => {
+    isMountedRef.current = true
     setMounted(true)
+    return () => {
+      isMountedRef.current = false
+    }
   }, [])
 
   const totalEarnedValue = withdrawableBalance + payouts
@@ -150,6 +158,12 @@ function TesterDashboardContent() {
   }
 
   const fetchProfileAndListings = useCallback(async (silent = false) => {
+    if (isFetchingRef.current && silent) {
+      return
+    }
+    isFetchingRef.current = true
+    const currentSeq = ++fetchSeqRef.current
+
     if (!silent) {
       setLoading(true)
       setLoadingError(null)
@@ -158,6 +172,7 @@ function TesterDashboardContent() {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
+        if (!isMountedRef.current || currentSeq !== fetchSeqRef.current) return
         if (!silent) {
           setLoadingError('Authentication required.')
           setLoading(false)
@@ -214,6 +229,7 @@ function TesterDashboardContent() {
       }
 
       if (profileError || !profileData) {
+        if (!isMountedRef.current || currentSeq !== fetchSeqRef.current) return
         if (!silent) {
           setLoadingError(sanitizeDatabaseError(profileError, 'Failed to retrieve user profile.'))
           setLoading(false)
@@ -221,9 +237,10 @@ function TesterDashboardContent() {
         return
       }
 
+      if (!isMountedRef.current || currentSeq !== fetchSeqRef.current) return
       setProfile(profileData)
-      if ((profileData as any)?.phone) {
-        setGcashNumber((profileData as any).phone)
+      if (profileData.phone) {
+        setGcashNumber(profileData.phone)
       }
 
       // Fetch tester earnings & payouts
@@ -234,28 +251,42 @@ function TesterDashboardContent() {
           .eq('tester_id', user.id)
           .order('created_at', { ascending: false })
 
+        interface PayoutRow {
+          id: string
+          reference_id?: string | null
+          amount: number
+          gcash_number?: string | null
+          status?: 'completed' | 'processing' | 'pending'
+          created_at: string
+        }
+
         if (payoutsData && payoutsData.length > 0) {
-          setPayouts(payoutsData.map((p: any) => ({
-            id: p.id,
-            reference_id: p.reference_id || `PAY-GCASH-${p.id.slice(0, 4)}`,
-            amount: p.amount,
-            gcash_number: p.gcash_number || 'Not configured',
-            status: p.status || 'completed',
-            created_at: p.created_at
-          })))
-          const totalPaid = payoutsData
-            .filter((p: any) => p.status === 'completed')
-            .reduce((sum: number, p: any) => sum + p.amount, 0)
-          setTotalEarnings(totalPaid)
-          setWithdrawableBalance(Math.max(0, totalPaid))
-        } else {
+          const rows = payoutsData as unknown as PayoutRow[]
+          if (isMountedRef.current && currentSeq === fetchSeqRef.current) {
+            setPayouts(rows.map((p) => ({
+              id: p.id,
+              reference_id: p.reference_id || `PAY-GCASH-${p.id.slice(0, 4)}`,
+              amount: p.amount,
+              gcash_number: p.gcash_number || 'Not configured',
+              status: p.status || 'completed',
+              created_at: p.created_at
+            })))
+            const totalPaid = rows
+              .filter((p) => p.status === 'completed')
+              .reduce((sum: number, p) => sum + p.amount, 0)
+            setTotalEarnings(totalPaid)
+            setWithdrawableBalance(Math.max(0, totalPaid))
+          }
+        } else if (isMountedRef.current && currentSeq === fetchSeqRef.current) {
           setPayouts([])
           setTotalEarnings(0)
           setWithdrawableBalance(0)
         }
       } catch (err) {
         console.warn('Payouts query fallback:', err)
-        setPayouts([])
+        if (isMountedRef.current && currentSeq === fetchSeqRef.current) {
+          setPayouts([])
+        }
       }
 
       // 2. Fetch submissions for user
@@ -280,27 +311,48 @@ function TesterDashboardContent() {
           .eq('tester_id', user.id)
           .order('created_at', { ascending: false })
 
+        interface UserSubmissionRow {
+          id: string
+          listing_id: string
+          status: SubmissionRecord['status']
+          rejection_reason?: string | null
+          rejection_explanation?: string | null
+          dispute_reason?: string | null
+          dispute_explanation?: string | null
+          submitted_at?: string | null
+          created_at: string
+          listings?: {
+            title?: string
+            rate_per_tester?: number
+          } | null
+        }
+
         if (userSubsData && userSubsData.length > 0) {
-          const mappedSubs: SubmissionRecord[] = userSubsData.map((s: any) => ({
+          const rows = userSubsData as unknown as UserSubmissionRow[]
+          const mappedSubs: SubmissionRecord[] = rows.map((s) => ({
             id: s.id,
             listing_id: s.listing_id,
             listing_title: s.listings?.title || 'Testing Listing Task',
             rate_per_tester: s.listings?.rate_per_tester || 150,
             status: s.status,
-            rejection_reason: s.rejection_reason,
-            rejection_explanation: s.rejection_explanation,
-            dispute_reason: s.dispute_reason,
-            dispute_explanation: s.dispute_explanation,
-            submitted_at: s.submitted_at,
+            rejection_reason: s.rejection_reason || undefined,
+            rejection_explanation: s.rejection_explanation || undefined,
+            dispute_reason: s.dispute_reason || undefined,
+            dispute_explanation: s.dispute_explanation || undefined,
+            submitted_at: s.submitted_at || undefined,
             created_at: s.created_at
           }))
-          setSubmissions(mappedSubs)
-        } else {
+          if (isMountedRef.current && currentSeq === fetchSeqRef.current) {
+            setSubmissions(mappedSubs)
+          }
+        } else if (isMountedRef.current && currentSeq === fetchSeqRef.current) {
           setSubmissions([])
         }
       } catch (err) {
         console.warn('User submissions fetch fallback:', err)
-        setSubmissions([])
+        if (isMountedRef.current && currentSeq === fetchSeqRef.current) {
+          setSubmissions([])
+        }
       }
 
       // 3. Fetch open and filling listings
@@ -323,7 +375,7 @@ function TesterDashboardContent() {
         .order('created_at', { ascending: false })
 
       if (listingsError) {
-        if (!silent) {
+        if (!silent && isMountedRef.current && currentSeq === fetchSeqRef.current) {
           setLoadingError(sanitizeDatabaseError(listingsError, 'Failed to load listings.'))
         } else {
           console.warn('Silent listings fetch error:', listingsError)
@@ -396,16 +448,19 @@ function TesterDashboardContent() {
           }
         })
 
-        setRawListings(mapped)
+        if (isMountedRef.current && currentSeq === fetchSeqRef.current) {
+          setRawListings(mapped)
+        }
       }
     } catch (err) {
-      if (!silent) {
+      if (!silent && isMountedRef.current && currentSeq === fetchSeqRef.current) {
         setLoadingError(sanitizeDatabaseError(err, 'An error occurred.'))
       } else {
         console.warn('Background sync error:', err)
       }
     } finally {
-      if (!silent) {
+      isFetchingRef.current = false
+      if (!silent && isMountedRef.current && currentSeq === fetchSeqRef.current) {
         setLoading(false)
         setIsInitialLoad(false)
       }
@@ -415,11 +470,12 @@ function TesterDashboardContent() {
   useEffect(() => {
     fetchProfileAndListings(false)
 
-    // 1. Supabase Realtime channel subscription
+    // 1. Supabase Realtime channel subscription with unique channel identifier
     let channel: ReturnType<typeof supabase.channel> | null = null
     try {
+      const channelId = `tester-listings-${Math.random().toString(36).substring(2, 9)}`
       channel = supabase
-        .channel('public:listings')
+        .channel(channelId)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'listings' },
@@ -653,7 +709,7 @@ function TesterDashboardContent() {
               <span className="text-[11px] text-slate-400 block font-medium">Destination GCash</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-xs font-mono font-bold text-slate-800">
-                  {maskGcashNumber(gcashNumber || (profile as any)?.phone || '')}
+                  {maskGcashNumber(gcashNumber || profile?.phone || '')}
                 </span>
                 <button
                   type="button"
@@ -824,7 +880,7 @@ function TesterDashboardContent() {
                             5s Test
                           </span>
                         )}
-                        {(job.target_age_group || job.target_gender || job.target_employment_status || job.target_tech_literacy) && (
+                        {isListingTargeted(job) && (
                           <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
                             Match
                           </span>

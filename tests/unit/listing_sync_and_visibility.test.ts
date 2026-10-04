@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NextRequest } from 'next/server';
 import { 
   matchesDemographics, 
   isListingTargeted, 
@@ -7,6 +8,21 @@ import {
 } from '@/lib/utils/demographics';
 import { JobListing } from '@/lib/utils/claim-button';
 import { UserProfile } from '@/types';
+import { GET } from '@/app/api/mock-supabase/[[...path]]/route';
+
+interface GlobalMockDb {
+  mockDb?: {
+    listings: Map<string, {
+      id: string;
+      title: string;
+      status: string;
+      created_at: string;
+      slots_count?: number;
+      rate_per_tester?: number;
+      [key: string]: unknown;
+    }>;
+  };
+}
 
 describe('Listing Synchronization, Status Alignment & Demographic Visibility', () => {
   const baseListing: JobListing = {
@@ -63,12 +79,18 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
       expect(isListingTargeted(baseListing)).toBe(false);
     });
 
-    it('identifies targeted listings accurately', () => {
+    it('identifies targeted listings accurately and handles "all" values', () => {
       expect(isListingTargeted({ ...baseListing, target_age_group: '18-24' })).toBe(true);
       expect(isListingTargeted({ ...baseListing, target_gender: 'male' })).toBe(true);
       expect(isListingTargeted({ ...baseListing, target_employment_status: 'student' })).toBe(true);
       expect(isListingTargeted({ ...baseListing, target_tech_literacy: 'advanced' })).toBe(true);
       expect(isListingTargeted({ ...baseListing, target_accessibility_tags: ['screen_reader'] })).toBe(true);
+
+      // Values set to 'all' should not mark the listing as targeted
+      expect(isListingTargeted({ ...baseListing, target_age_group: 'all' })).toBe(false);
+      expect(isListingTargeted({ ...baseListing, target_gender: 'all' })).toBe(false);
+      expect(isListingTargeted({ ...baseListing, target_employment_status: 'all' })).toBe(false);
+      expect(isListingTargeted({ ...baseListing, target_tech_literacy: 'all' })).toBe(false);
       expect(isListingTargeted(baseListing)).toBe(false);
     });
 
@@ -82,6 +104,20 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
       };
 
       expect(matchesDemographics(targetedListing, completeProfile)).toBe(true);
+    });
+
+    it('treats "all" criteria as matching any profile', () => {
+      const broadListing: JobListing = {
+        ...baseListing,
+        target_age_group: 'all',
+        target_gender: 'all',
+        target_employment_status: 'all',
+        target_tech_literacy: 'all',
+      };
+
+      expect(matchesDemographics(broadListing, completeProfile)).toBe(true);
+      expect(matchesDemographics(broadListing, incompleteProfile)).toBe(true);
+      expect(matchesDemographics(broadListing, null)).toBe(true);
     });
 
     it('rejects match when any demographic criterion differs', () => {
@@ -159,7 +195,7 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
     });
   });
 
-  describe('2. Status Filter Alignment (open + filling)', () => {
+  describe('2. Status Filter Alignment (open + filling) & Real Mock Route Handler', () => {
     const candidateListings = [
       { id: '1', title: 'Open Listing', status: 'open' },
       { id: '2', title: 'Funded & Filling Listing', status: 'filling' },
@@ -178,33 +214,60 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
       expect(activeListings.some(l => l.status === 'released')).toBe(false);
     });
 
-    it('parses PostgREST in. operator correctly for mock-supabase route', () => {
-      const parseStatusIn = (statusParam: string) => {
-        if (statusParam.startsWith('in.')) {
-          return statusParam
-            .replace(/^in\.\(|\)$/g, '')
-            .split(',')
-            .map(s => s.trim().replace(/^["']|["']$/g, ''));
-        }
-        if (statusParam.startsWith('eq.')) {
-          return [statusParam.substring(3)];
-        }
-        return [];
-      };
+    it('executes real mock-supabase GET route handler with status in. operator', async () => {
+      const mockGlobal = globalThis as GlobalMockDb;
+      if (mockGlobal.mockDb?.listings) {
+        mockGlobal.mockDb.listings.clear();
+        mockGlobal.mockDb.listings.set('test-open', {
+          id: 'test-open',
+          title: 'Active Open Listing',
+          status: 'open',
+          created_at: '2026-10-04T10:00:00Z',
+        });
+        mockGlobal.mockDb.listings.set('test-filling', {
+          id: 'test-filling',
+          title: 'Funded Filling Listing',
+          status: 'filling',
+          created_at: '2026-10-04T11:00:00Z',
+        });
+        mockGlobal.mockDb.listings.set('test-draft', {
+          id: 'test-draft',
+          title: 'Unpublished Draft',
+          status: 'draft',
+          created_at: '2026-10-04T09:00:00Z',
+        });
+        mockGlobal.mockDb.listings.set('test-review', {
+          id: 'test-review',
+          title: 'In Review Campaign',
+          status: 'review',
+          created_at: '2026-10-04T08:00:00Z',
+        });
+      }
 
-      // Standard Supabase PostgREST parameter format
-      expect(parseStatusIn('in.(open,filling)')).toEqual(['open', 'filling']);
-      // Quoted format
-      expect(parseStatusIn('in.("open","filling")')).toEqual(['open', 'filling']);
-      // Single-quoted format with whitespace
-      expect(parseStatusIn("in.('open', 'filling')")).toEqual(['open', 'filling']);
-      // Single eq. fallback
-      expect(parseStatusIn('eq.open')).toEqual(['open']);
+      // 1. Query with in.(open,filling)
+      const reqIn = new NextRequest(
+        'http://localhost:3000/api/mock-supabase/rest/v1/listings?status=in.(open,filling)&order=created_at.desc'
+      );
+      const resIn = await GET(reqIn, { params: { path: ['rest', 'v1', 'listings'] } });
+      expect(resIn.status).toBe(200);
 
-      // Application to candidate listings
-      const allowed = parseStatusIn('in.(open,filling)');
-      const filtered = candidateListings.filter(l => allowed.includes(l.status));
-      expect(filtered.map(l => l.status)).toEqual(['open', 'filling']);
+      const itemsIn = (await resIn.json()) as Array<{ id: string; status: string }>;
+      const itemStatuses = itemsIn.map(i => i.status);
+
+      expect(itemStatuses).toContain('open');
+      expect(itemStatuses).toContain('filling');
+      expect(itemStatuses).not.toContain('draft');
+      expect(itemStatuses).not.toContain('review');
+
+      // 2. Query with eq.open
+      const reqEq = new NextRequest(
+        'http://localhost:3000/api/mock-supabase/rest/v1/listings?status=eq.open'
+      );
+      const resEq = await GET(reqEq, { params: { path: ['rest', 'v1', 'listings'] } });
+      expect(resEq.status).toBe(200);
+
+      const itemsEq = (await resEq.json()) as Array<{ id: string; status: string }>;
+      expect(itemsEq.every(i => i.status === 'open')).toBe(true);
     });
   });
 
@@ -224,7 +287,7 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
     });
   });
 
-  describe('4. Background Polling & Visibility Lifecycle', () => {
+  describe('4. Background Polling, Concurrency & Lifecycle Cleanup', () => {
     beforeEach(() => {
       vi.useFakeTimers();
     });
@@ -268,6 +331,40 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
       clearInterval(pollInterval);
       vi.advanceTimersByTime(30000);
       expect(refetchSpy).toHaveBeenCalledTimes(3);
+    });
+
+    it('guards against setting state on unmounted components and race conditions', async () => {
+      let isMounted = true;
+      let inFlight = false;
+      let fetchSeq = 0;
+      const stateUpdateSpy = vi.fn();
+
+      const fetchListings = async (silent = false) => {
+        if (inFlight && silent) return;
+        inFlight = true;
+        const currentSeq = ++fetchSeq;
+
+        // Simulate async network latency
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        inFlight = false;
+        if (!isMounted || currentSeq !== fetchSeq) return;
+        stateUpdateSpy();
+      };
+
+      // Trigger 1 (visible fetch)
+      const p1 = fetchListings(false);
+
+      // Advance time slightly, unmount before completion
+      vi.advanceTimersByTime(20);
+      isMounted = false;
+
+      // Complete timer
+      vi.advanceTimersByTime(50);
+      await p1;
+
+      // State setter should NOT have been called because component unmounted
+      expect(stateUpdateSpy).not.toHaveBeenCalled();
     });
 
     it('cleans up interval, Realtime channel, and window event listeners on unmount', () => {

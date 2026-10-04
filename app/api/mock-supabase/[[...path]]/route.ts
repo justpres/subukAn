@@ -27,6 +27,11 @@ interface MockProfile {
   updated_at?: string;
 }
 
+interface MockVariant {
+  id?: string;
+  [key: string]: unknown;
+}
+
 interface MockListing {
   id: string;
   poster_id?: string;
@@ -39,7 +44,7 @@ interface MockListing {
   status?: string;
   submissions?: MockSubmission[];
   tasks?: MockTask[];
-  variants?: any[];
+  variants?: MockVariant[];
   target_accessibility_tags?: string[];
   parent_listing_id?: string | null;
   created_at?: string;
@@ -100,7 +105,7 @@ interface MockNotification {
 
 interface MockPosterPaymentSettings {
   id: string;
-  payment_settings: Record<string, any>;
+  payment_settings: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
   [key: string]: unknown;
@@ -506,11 +511,11 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
   // REST poster_payment_settings upsert
   if (path === 'rest/v1/poster_payment_settings') {
     const isArray = Array.isArray(body);
-    const items = isArray ? (body as any[]) : [body];
+    const items = isArray ? (body as Record<string, unknown>[]) : [body as Record<string, unknown>];
     const results = items.map(item => {
       const id = String(item.id || '');
       const existing = db.posterPaymentSettings.get(id);
-      const payment_settings = item.payment_settings || existing?.payment_settings || {
+      const payment_settings = (item.payment_settings as Record<string, unknown> | undefined) || existing?.payment_settings || {
         sandbox_mode: true,
         paymongo_public_key: '',
         paymongo_secret_key: '',
@@ -534,7 +539,7 @@ export async function POST(request: NextRequest, { params }: { params: { path?: 
     const listing: MockListing = {
       id: listingId,
       ...body,
-      variants: Array.isArray(body.variants) ? body.variants : [],
+      variants: Array.isArray(body.variants) ? (body.variants as MockVariant[]) : [],
       target_accessibility_tags: Array.isArray(body.target_accessibility_tags) ? body.target_accessibility_tags : [],
       parent_listing_id: body.parent_listing_id || null,
       created_at: new Date().toISOString(),
