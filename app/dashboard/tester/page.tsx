@@ -33,7 +33,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 import { JobListing, getButtonConfig } from '@/lib/utils/claim-button'
 import { formatRejectionReason, formatDisputeReason } from '@/lib/utils/workspace-status'
-import { filterListingsByDemographics, isProfileDemographicsIncomplete, isListingTargeted } from '@/lib/utils/demographics'
+import { filterListingsByDemographics, isProfileDemographicsIncomplete, isListingTargeted, getUnmetDemographicRequirements } from '@/lib/utils/demographics'
 import { UserProfile } from '@/types'
 import dynamic from 'next/dynamic'
 import { LineChart } from '@tremor/react'
@@ -106,11 +106,14 @@ function TesterDashboardContent() {
   }
   const [rawListings, setRawListings] = useState<JobListing[]>([])
 
-  const { matchedListings, unmatchedCount } = useMemo(() => {
+  const { matchedListings, unmatchedListings, unmatchedCount } = useMemo(() => {
     return filterListingsByDemographics(rawListings, profile)
   }, [rawListings, profile])
 
-  const listings = matchedListings
+  // Display all open/filling listings in feed: matched listings first, followed by targeted/unmatched listings
+  const listings = useMemo(() => {
+    return [...matchedListings, ...unmatchedListings]
+  }, [matchedListings, unmatchedListings])
   const [submissions, setSubmissions] = useState<SubmissionRecord[]>([])
   const [payouts, setPayouts] = useState<PayoutRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -914,21 +917,17 @@ function TesterDashboardContent() {
             <div className="bg-white border border-slate-200/80 rounded-xl p-12 text-center text-slate-500 shadow-xs space-y-3">
               <p className="text-base font-bold text-slate-800">No open tests right now</p>
               <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                {unmatchedCount > 0
-                  ? `There ${unmatchedCount === 1 ? 'is' : 'are'} ${unmatchedCount} targeted testing ${unmatchedCount === 1 ? 'opportunity' : 'opportunities'} available. Complete or update your demographic profile to see if you qualify.`
-                  : 'New testing opportunities are posted regularly. Check back shortly or verify your demographic settings above to receive targeted tests.'}
+                New testing opportunities are posted regularly. Check back shortly or verify your demographic settings above to receive targeted tests.
               </p>
-              {unmatchedCount > 0 && (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsProfileModalOpen(true)}
-                    className="px-4 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow-xs transition-colors"
-                  >
-                    Update Demographics Profile
-                  </button>
-                </div>
-              )}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="px-4 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow-xs transition-colors"
+                >
+                  Update Demographics Profile
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -940,12 +939,12 @@ function TesterDashboardContent() {
                     </div>
                     <div>
                       <p className="font-bold text-blue-950">
-                        {unmatchedCount} additional {unmatchedCount === 1 ? 'test opportunity is' : 'test opportunities are'} available
+                        {unmatchedCount} targeted {unmatchedCount === 1 ? 'campaign is' : 'campaigns are'} waiting for matching testers
                       </p>
                       <p className="text-blue-800/90 text-[11px] mt-0.5">
                         {isProfileDemographicsIncomplete(profile)
-                          ? 'Complete your demographics profile to see if you qualify for targeted campaigns.'
-                          : 'These campaigns require specific demographic criteria. Update your profile if your details have changed.'}
+                          ? 'Complete your demographics profile to see if you qualify for targeted campaigns below.'
+                          : 'These campaigns require specific demographic criteria shown below. Update your profile if your details have changed.'}
                       </p>
                     </div>
                   </div>
@@ -960,16 +959,27 @@ function TesterDashboardContent() {
               )}
               <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-xs divide-y divide-slate-100">
               {listings.map((job) => {
-                const btnConfig = getButtonConfig(job)
+                const isMatched = job.is_demographic_matched !== false
+                const isTargeted = isListingTargeted(job)
+                const isUnmatched = isTargeted && !isMatched && !job.user_submission_status
+                const unmetRequirements = isUnmatched
+                  ? (job.unmet_demographics && job.unmet_demographics.length > 0
+                      ? job.unmet_demographics
+                      : getUnmetDemographicRequirements(job, profile))
+                  : []
+                const btnConfig = getButtonConfig(job, { isMatched: !isUnmatched })
                 const isFull = job.slots_filled >= job.slots_count && !job.user_submission_status
+
                 return (
                   <div 
                     key={job.id} 
-                    className={`px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 hover:bg-slate-50/60 ${
+                    className={`px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 hover:bg-slate-50/60 ${
                       isFull ? 'opacity-60' : ''
+                    } ${
+                      isUnmatched ? 'bg-slate-50/40 border-l-2 border-l-purple-500' : ''
                     }`}
                   >
-                    <div className="space-y-1 min-w-0 flex-1">
+                    <div className="space-y-1.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-slate-900 text-sm truncate">
                           {job.title}
@@ -979,10 +989,17 @@ function TesterDashboardContent() {
                             5s Test
                           </span>
                         )}
-                        {isListingTargeted(job) && (
-                          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
-                            Match
-                          </span>
+                        {isTargeted && (
+                          isMatched ? (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/80 shadow-2xs font-mono shrink-0">
+                              Match
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 shadow-2xs font-mono shrink-0 flex items-center gap-1">
+                              <Target className="w-3 h-3" />
+                              Targeted Campaign
+                            </span>
+                          )
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-medium">
@@ -1000,28 +1017,64 @@ function TesterDashboardContent() {
                           </>
                         )}
                       </div>
+
+                      {isUnmatched && unmetRequirements.length > 0 && (
+                        <div className="pt-1.5 flex flex-wrap items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-slate-500 font-mono mr-0.5">
+                            Requires:
+                          </span>
+                          {unmetRequirements.map((req, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-purple-50/80 text-purple-800 border border-purple-200/80 font-mono"
+                            >
+                              {req}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
                       <span className="text-base font-extrabold text-slate-900 font-mono tabular-nums">
                         ₱{job.rate_per_tester.toFixed(2)}
                       </span>
-                      <Link
-                        href={btnConfig.href}
-                        className={`px-3.5 py-2 font-bold text-xs rounded-lg border text-center transition-all shadow-xs ${btnConfig.className}`}
-                        onClick={(e) => {
-                          if (btnConfig.disabled) {
-                            e.preventDefault()
-                          }
-                        }}
-                      >
-                        {btnConfig.text}
-                      </Link>
+                      {isUnmatched ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsProfileModalOpen(true)}
+                            className="px-3.5 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow-xs transition-colors shrink-0"
+                          >
+                            Update Demographics
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsProfileModalOpen(true)}
+                            title="Click to update demographics profile"
+                            className={`hidden md:inline-flex px-3.5 py-2 font-bold text-xs rounded-lg border text-center transition-all shadow-xs ${btnConfig.className}`}
+                          >
+                            {btnConfig.text}
+                          </button>
+                        </div>
+                      ) : (
+                        <Link
+                          href={btnConfig.href}
+                          className={`px-3.5 py-2 font-bold text-xs rounded-lg border text-center transition-all shadow-xs ${btnConfig.className}`}
+                          onClick={(e) => {
+                            if (btnConfig.disabled) {
+                              e.preventDefault()
+                            }
+                          }}
+                        >
+                          {btnConfig.text}
+                        </Link>
+                      )}
                     </div>
                   </div>
                 )
               })}
-            </div>
+              </div>
             </>
           )}
         </div>

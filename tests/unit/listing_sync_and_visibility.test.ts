@@ -1,12 +1,15 @@
+import fs from 'fs';
+import path from 'path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { 
   matchesDemographics, 
   isListingTargeted, 
   isProfileDemographicsIncomplete, 
-  filterListingsByDemographics 
+  filterListingsByDemographics,
+  getUnmetDemographicRequirements 
 } from '@/lib/utils/demographics';
-import { JobListing } from '@/lib/utils/claim-button';
+import { JobListing, getButtonConfig } from '@/lib/utils/claim-button';
 import { UserProfile } from '@/types';
 import { GET } from '@/app/api/mock-supabase/[[...path]]/route';
 
@@ -400,6 +403,178 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
       expect(clearIntervalSpy).toHaveBeenCalledWith(pollTimer);
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith('visibilitychange', handleVisibilityOrFocus);
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith('focus', handleVisibilityOrFocus);
+    });
+  });
+
+  describe('5. Unmet Demographic Requirements Helper', () => {
+    it('returns empty array when listing has no targeting criteria', () => {
+      expect(getUnmetDemographicRequirements(baseListing, completeProfile)).toEqual([]);
+      expect(getUnmetDemographicRequirements(baseListing, incompleteProfile)).toEqual([]);
+      expect(getUnmetDemographicRequirements(baseListing, null)).toEqual([]);
+    });
+
+    it('returns empty array when profile matches all targeting criteria', () => {
+      const targetedListing: JobListing = {
+        ...baseListing,
+        target_age_group: '25-34',
+        target_gender: 'female',
+        target_employment_status: 'employed',
+        target_tech_literacy: 'intermediate',
+        target_accessibility_tags: ['screen_reader'],
+      };
+      expect(getUnmetDemographicRequirements(targetedListing, completeProfile)).toEqual([]);
+    });
+
+    it('returns formatted unmet criteria labels when profile does not match', () => {
+      const targetedListing: JobListing = {
+        ...baseListing,
+        target_age_group: '25-34',
+        target_gender: 'female',
+        target_employment_status: 'student',
+        target_tech_literacy: 'non_technical',
+        target_accessibility_tags: ['screen_reader', 'keyboard_only'],
+      };
+
+      // Profile has: age_group: '25-34', gender: 'female', employment_status: 'employed', tech_literacy: 'intermediate', tags: ['screen_reader', 'high_contrast']
+      const unmet = getUnmetDemographicRequirements(targetedListing, completeProfile);
+
+      expect(unmet).toContain('Employment: Student');
+      expect(unmet).toContain('Tech Experience: Beginner');
+      expect(unmet).toContain('Keyboard-Only Required');
+      expect(unmet).not.toContain('Age: 25-34');
+      expect(unmet).not.toContain('Gender: Female');
+      expect(unmet).not.toContain('Screen Reader Required');
+    });
+
+    it('returns exact expected list when all criteria are unmet on empty profile', () => {
+      const targetedListing: JobListing = {
+        ...baseListing,
+        target_age_group: '25-34',
+        target_gender: 'female',
+        target_tech_literacy: 'non_technical',
+        target_accessibility_tags: ['screen_reader'],
+      };
+
+      const unmet = getUnmetDemographicRequirements(targetedListing, null);
+      expect(unmet).toEqual([
+        'Age: 25-34',
+        'Gender: Female',
+        'Tech Experience: Beginner',
+        'Screen Reader Required',
+      ]);
+    });
+
+    it('ignores "all" target criteria from unmet requirements', () => {
+      const allListing: JobListing = {
+        ...baseListing,
+        target_age_group: 'all',
+        target_gender: 'all',
+        target_employment_status: 'all',
+        target_tech_literacy: 'all',
+        target_accessibility_tags: [],
+      };
+
+      expect(getUnmetDemographicRequirements(allListing, incompleteProfile)).toEqual([]);
+      expect(getUnmetDemographicRequirements(allListing, null)).toEqual([]);
+    });
+
+    it('formats various employment and tech experience labels correctly', () => {
+      expect(getUnmetDemographicRequirements({ ...baseListing, target_employment_status: 'self-employed' }, null))
+        .toEqual(['Employment: Self-Employed']);
+      expect(getUnmetDemographicRequirements({ ...baseListing, target_tech_literacy: 'casual_user' }, null))
+        .toEqual(['Tech Experience: Casual User']);
+      expect(getUnmetDemographicRequirements({ ...baseListing, target_tech_literacy: 'student_dev' }, null))
+        .toEqual(['Tech Experience: Developer']);
+      expect(getUnmetDemographicRequirements({ ...baseListing, target_tech_literacy: 'advanced' }, null))
+        .toEqual(['Tech Experience: Advanced']);
+    });
+  });
+
+  describe('6. Claim Button Configuration & Feed Decoration for Unmatched Targeted Listings', () => {
+    const targetedListing: JobListing = {
+      ...baseListing,
+      target_age_group: '18-24',
+      target_gender: 'male',
+    };
+
+    it('returns "Targeted — Needs Profile Match" disabled button when isMatched is false', () => {
+      const config = getButtonConfig(targetedListing, { isMatched: false });
+      expect(config.text).toBe('Targeted — Needs Profile Match');
+      expect(config.disabled).toBe(true);
+      expect(config.action).toBe('update_profile');
+      expect(config.status).toBe('unmatched_targeted');
+    });
+
+    it('supports boolean false as second argument to getButtonConfig', () => {
+      const config = getButtonConfig(targetedListing, false);
+      expect(config.text).toBe('Targeted — Needs Profile Match');
+      expect(config.disabled).toBe(true);
+      expect(config.action).toBe('update_profile');
+    });
+
+    it('reads is_demographic_matched property from JobListing when options are omitted', () => {
+      const unmatchedJob: JobListing = {
+        ...targetedListing,
+        is_demographic_matched: false,
+      };
+      const config = getButtonConfig(unmatchedJob);
+      expect(config.text).toBe('Targeted — Needs Profile Match');
+      expect(config.disabled).toBe(true);
+    });
+
+    it('returns "Claim Slot & Start Test" when isMatched is true', () => {
+      const config = getButtonConfig(targetedListing, { isMatched: true });
+      expect(config.text).toBe('Claim Slot & Start Test');
+      expect(config.disabled).toBe(false);
+      expect(config.action).toBe('claim');
+    });
+
+    it('user submission status takes precedence over demographic matching status', () => {
+      const inProgressTargeted: JobListing = {
+        ...targetedListing,
+        user_submission_status: 'in_progress',
+      };
+      const config = getButtonConfig(inProgressTargeted, { isMatched: false });
+      expect(config.text).toBe('Continue Testing →');
+      expect(config.disabled).toBe(false);
+
+      const approvedTargeted: JobListing = {
+        ...targetedListing,
+        user_submission_status: 'approved',
+      };
+      const appConfig = getButtonConfig(approvedTargeted, { isMatched: false });
+      expect(appConfig.text).toContain('Approved');
+      expect(appConfig.disabled).toBe(false);
+    });
+
+    it('decorates listings with is_demographic_matched and unmet_demographics in filterListingsByDemographics', () => {
+      const listings: JobListing[] = [
+        { ...baseListing, id: 'open-all', title: 'Open Campaign' },
+        { ...baseListing, id: 'targeted-matched', target_age_group: '25-34', target_gender: 'female' },
+        { ...baseListing, id: 'targeted-unmatched', target_age_group: '18-24', target_gender: 'male' },
+      ];
+
+      const { matchedListings, unmatchedListings } = filterListingsByDemographics(listings, completeProfile);
+
+      expect(matchedListings.map(l => l.id)).toEqual(['open-all', 'targeted-matched']);
+      expect(matchedListings.every(l => l.is_demographic_matched === true)).toBe(true);
+      expect(matchedListings.every(l => l.unmet_demographics?.length === 0)).toBe(true);
+
+      expect(unmatchedListings.map(l => l.id)).toEqual(['targeted-unmatched']);
+      const unmatchedItem = unmatchedListings[0];
+      expect(unmatchedItem.is_demographic_matched).toBe(false);
+      expect(unmatchedItem.unmet_demographics).toEqual(['Age: 18-24', 'Gender: Male']);
+    });
+  });
+
+  describe('7. Realtime Listings Migration (00018_enable_listings_realtime.sql)', () => {
+    it('migration file exists on disk with valid SQL commands', () => {
+      const migrationPath = path.resolve(process.cwd(), 'supabase/migrations/00018_enable_listings_realtime.sql');
+      expect(fs.existsSync(migrationPath)).toBe(true);
+
+      const sqlContent = fs.readFileSync(migrationPath, 'utf8');
+      expect(sqlContent).toContain('alter publication supabase_realtime add table public.listings;');
+      expect(sqlContent).toContain('alter table public.listings replica identity full;');
     });
   });
 });
