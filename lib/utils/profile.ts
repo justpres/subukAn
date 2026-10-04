@@ -68,12 +68,7 @@ export function resolveInitialDeviceTypes(
     return [profile.device_types];
   }
 
-  // If explicitly null, treat as empty selection
-  if (profile.device_types === null) {
-    return [];
-  }
-
-  // If device_types is undefined, inspect device_type (singular)
+  // If device_types is not an array (null or undefined), inspect legacy device_type
   if (profile.device_type === 'mobile') {
     return ['Android Mobile'];
   }
@@ -82,6 +77,11 @@ export function resolveInitialDeviceTypes(
   }
   if (profile.device_type === 'both') {
     return DEFAULT_DEVICE_TYPES;
+  }
+
+  // If explicitly null and no legacy device_type, treat as empty selection
+  if (profile.device_types === null) {
+    return [];
   }
 
   return DEFAULT_DEVICE_TYPES;

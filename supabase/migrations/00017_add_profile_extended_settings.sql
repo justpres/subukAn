@@ -38,6 +38,8 @@ begin
     else
       new.device_type := null;
     end if;
+  else
+    new.device_type := null;
   end if;
   return new;
 end;
@@ -49,9 +51,13 @@ create trigger trg_sync_profile_device_type
   for each row
   execute function public.sync_profile_device_type();
 
--- 3. Backfill device_types and sync device_type for existing records
+-- 3. Backfill device_types and sync device_type for existing records preserving legacy device_type
 update public.profiles
-set device_types = '{Android Mobile,Windows PC}'::text[]
+set device_types = case
+  when device_type = 'mobile' then '{Android Mobile}'::text[]
+  when device_type = 'desktop' then '{Windows PC}'::text[]
+  else '{Android Mobile,Windows PC}'::text[]
+end
 where device_types is null;
 
 -- 4. Reload PostgREST schema cache

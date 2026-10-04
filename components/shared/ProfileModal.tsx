@@ -493,7 +493,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
                       </div>
                       <input
                         type="checkbox"
-                        checked={notificationSettings.email_payouts}
+                        checked={Boolean(notificationSettings.email_payouts)}
                         onChange={e => setNotificationSettings(prev => ({ ...prev, email_payouts: e.target.checked }))}
                         className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                       />
@@ -506,7 +506,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
                       </div>
                       <input
                         type="checkbox"
-                        checked={notificationSettings.email_submissions}
+                        checked={Boolean(notificationSettings.email_submissions)}
                         onChange={e => setNotificationSettings(prev => ({ ...prev, email_submissions: e.target.checked }))}
                         className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                       />
@@ -519,7 +519,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
                       </div>
                       <input
                         type="checkbox"
-                        checked={notificationSettings.email_listings}
+                        checked={Boolean(notificationSettings.email_listings)}
                         onChange={e => setNotificationSettings(prev => ({ ...prev, email_listings: e.target.checked }))}
                         className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                       />
@@ -532,7 +532,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
                       </div>
                       <input
                         type="checkbox"
-                        checked={notificationSettings.email_disputes}
+                        checked={Boolean(notificationSettings.email_disputes)}
                         onChange={e => setNotificationSettings(prev => ({ ...prev, email_disputes: e.target.checked }))}
                         className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                       />

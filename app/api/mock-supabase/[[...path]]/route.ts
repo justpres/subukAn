@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { mapDeviceTypesToDeviceType } from '@/lib/utils/profile';
 
 interface MockUser {
   id: string;
@@ -6,9 +7,9 @@ interface MockUser {
   user_metadata?: {
     role?: string;
     full_name?: string;
-    device_type?: string;
-    device_types?: string[];
-    location?: string;
+    device_type?: string | null;
+    device_types?: string[] | null;
+    location?: string | null;
     tech_comfort_level?: string;
     phone_verified?: boolean;
     age_group?: string;
@@ -21,8 +22,8 @@ interface MockProfile {
   id: string;
   role?: string;
   full_name?: string;
-  device_type?: string;
-  device_types?: string[];
+  device_type?: string | null;
+  device_types?: string[] | null;
   location?: string | null;
   notification_settings?: {
     email_payouts: boolean;
@@ -281,6 +282,11 @@ interface RequestBody {
   task_id?: string;
   parent_listing_id?: string | null;
   assigned_variant_id?: string | null;
+  device_type?: string | null;
+  device_types?: string[] | null;
+  location?: string | null;
+  notification_settings?: Record<string, boolean>;
+  accessibility_tags?: string[];
   [key: string]: unknown;
 }
 
@@ -751,20 +757,28 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
       const id = idParam.substring(3);
       const profile = db.profiles.get(id);
       if (profile) {
+        const { notification_settings: bodyNotifs, ...restBody } = body;
         const updated: MockProfile = {
           ...profile,
-          ...body,
+          ...restBody,
           updated_at: new Date().toISOString(),
         };
 
         // Explicitly preserve empty array for device_types if provided in body
         if (Array.isArray(body.device_types)) {
           updated.device_types = body.device_types;
+          if (body.device_type === undefined) {
+            const mapped = mapDeviceTypesToDeviceType(body.device_types);
+            updated.device_type = mapped || undefined;
+          }
+        }
+        if (Array.isArray(body.accessibility_tags)) {
+          updated.accessibility_tags = body.accessibility_tags;
         }
         if (body.location !== undefined) {
           updated.location = body.location ? String(body.location) : null;
         }
-        if (body.notification_settings !== undefined) {
+        if (bodyNotifs !== undefined) {
           updated.notification_settings = {
             ...(profile.notification_settings || {
               email_payouts: true,
@@ -772,7 +786,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { path?:
               email_listings: true,
               email_disputes: true,
             }),
-            ...(body.notification_settings as Record<string, boolean>),
+            ...(bodyNotifs as Record<string, boolean>),
           };
         }
 

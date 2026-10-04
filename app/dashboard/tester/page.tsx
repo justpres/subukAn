@@ -588,13 +588,16 @@ function TesterDashboardContent() {
   }, [supabase, fetchProfileAndListings])
 
   const handleUpdateProfile = async (updatedData: Partial<UserProfile>) => {
-    if (!profile?.id) return
+    const targetUserId = profile?.id || (await supabase.auth.getUser()).data.user?.id
+    if (!targetUserId) {
+      throw new Error('Authentication required to save profile.')
+    }
 
     try {
       const { error } = await supabase
         .from('profiles')
         .update(updatedData)
-        .eq('id', profile.id)
+        .eq('id', targetUserId)
 
       if (error) {
         // Check if error is specifically due to extended columns missing in older DB schema
@@ -603,6 +606,7 @@ function TesterDashboardContent() {
           error.message?.includes('notification_settings') ||
           error.message?.includes('location') ||
           error.code === 'PGRST204' ||
+          error.code === '42703' ||
           (Boolean(error.message?.includes('schema cache')) && (
             Boolean(error.message?.includes('column')) ||
             Boolean(error.message?.includes('Could not find'))
@@ -620,7 +624,7 @@ function TesterDashboardContent() {
           const { error: fallbackError } = await supabase
             .from('profiles')
             .update(legacyPayload)
-            .eq('id', profile.id)
+            .eq('id', targetUserId)
 
           if (fallbackError) {
             const sanitized = sanitizeDatabaseError(fallbackError, 'Failed to update profile settings.')

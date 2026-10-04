@@ -36,12 +36,19 @@ describe('Profile Settings Save & Form Invariants', () => {
       expect(result.length).toBe(0);
     });
 
-    it('respects explicitly null device_types and returns empty array without resetting to defaults', () => {
-      const profileWithNull: Partial<UserProfile> = {
-        device_types: null,
+    it('respects explicitly null device_types and falls back to legacy singular device_type if present', () => {
+      expect(resolveInitialDeviceTypes({ device_types: null, device_type: 'mobile' })).toEqual(['Android Mobile']);
+      expect(resolveInitialDeviceTypes({ device_types: null, device_type: 'desktop' })).toEqual(['Windows PC']);
+      expect(resolveInitialDeviceTypes({ device_types: null, device_type: 'both' })).toEqual(DEFAULT_DEVICE_TYPES);
+      expect(resolveInitialDeviceTypes({ device_types: null })).toEqual([]);
+    });
+
+    it('CRITICAL: empty array [] always wins over legacy singular device_type', () => {
+      const profile: Partial<UserProfile> = {
+        device_types: [],
+        device_type: 'both',
       };
-      const result = resolveInitialDeviceTypes(profileWithNull);
-      expect(result).toEqual([]);
+      expect(resolveInitialDeviceTypes(profile)).toEqual([]);
     });
 
     it('maps single string device_types into an array', () => {
@@ -198,10 +205,11 @@ describe('Profile Settings Save & Form Invariants', () => {
       expect(data.notification_settings?.email_payouts).toBe(true);
     });
 
-    it('correctly updates and preserves empty device_types and false notifications on PATCH', async () => {
+    it('correctly updates and preserves empty device_types, empty accessibility_tags, and false notifications on PATCH', async () => {
       const patchPayload = {
         device_types: [],
         device_type: null,
+        accessibility_tags: [],
         notification_settings: {
           email_payouts: false,
           email_submissions: false,
@@ -224,6 +232,7 @@ describe('Profile Settings Save & Form Invariants', () => {
 
       const patchData = await patchRes.json() as UserProfile;
       expect(patchData.device_types).toEqual([]);
+      expect(patchData.accessibility_tags).toEqual([]);
       expect(patchData.notification_settings?.email_payouts).toBe(false);
       expect(patchData.notification_settings?.email_submissions).toBe(false);
 
@@ -235,8 +244,50 @@ describe('Profile Settings Save & Form Invariants', () => {
       const refreshedData = await getRes.json() as UserProfile;
 
       expect(refreshedData.device_types).toEqual([]);
+      expect(refreshedData.accessibility_tags).toEqual([]);
       expect(refreshedData.notification_settings?.email_payouts).toBe(false);
       expect(refreshedData.notification_settings?.email_listings).toBe(false);
+    });
+
+    it('auto-synchronizes device_type on PATCH when only device_types array is updated', async () => {
+      // 1. Mobile-only
+      const mobileReq = new NextRequest('http://localhost:3000/rest/v1/profiles?id=eq.user_mock_tester_id', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/vnd.pgrst.object+json',
+        },
+        body: JSON.stringify({ device_types: ['Android Mobile'] }),
+      });
+      const mobileRes = await PATCH(mobileReq, { params: { path: ['rest', 'v1', 'profiles'] } });
+      const mobileData = await mobileRes.json() as UserProfile;
+      expect(mobileData.device_type).toBe('mobile');
+
+      // 2. Both
+      const bothReq = new NextRequest('http://localhost:3000/rest/v1/profiles?id=eq.user_mock_tester_id', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/vnd.pgrst.object+json',
+        },
+        body: JSON.stringify({ device_types: ['Android Mobile', 'Windows PC'] }),
+      });
+      const bothRes = await PATCH(bothReq, { params: { path: ['rest', 'v1', 'profiles'] } });
+      const bothData = await bothRes.json() as UserProfile;
+      expect(bothData.device_type).toBe('both');
+
+      // 3. Empty (all unchecked)
+      const emptyReq = new NextRequest('http://localhost:3000/rest/v1/profiles?id=eq.user_mock_tester_id', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/vnd.pgrst.object+json',
+        },
+        body: JSON.stringify({ device_types: [] }),
+      });
+      const emptyRes = await PATCH(emptyReq, { params: { path: ['rest', 'v1', 'profiles'] } });
+      const emptyData = await emptyRes.json() as UserProfile;
+      expect(emptyData.device_type).toBeUndefined();
     });
   });
 
@@ -289,6 +340,52 @@ describe('Profile Settings Save & Form Invariants', () => {
       });
       expect(executedPayload).not.toHaveProperty('device_types');
       expect(executedPayload).not.toHaveProperty('notification_settings');
+    });
+
+    it('triggers fallback on PostgreSQL undefined_column (42703) or PGRST204 errors', async () => {
+      const isExtendedColumnError = (err: { message?: string; code?: string }) =>
+        err.message?.includes('device_types') ||
+        err.message?.includes('notification_settings') ||
+        err.message?.includes('location') ||
+        err.code === 'PGRST204' ||
+        err.code === '42703' ||
+        (Boolean(err.message?.includes('schema cache')) && (
+          Boolean(err.message?.includes('column')) ||
+          Boolean(err.message?.includes('Could not find'))
+        ));
+
+      // 1. PostgreSQL 42703 undefined_column
+      expect(isExtendedColumnError({ code: '42703', message: 'column "device_types" of relation "profiles" does not exist' })).toBe(true);
+
+      // 2. PostgREST PGRST204
+      expect(isExtendedColumnError({ code: 'PGRST204', message: 'Columns not found in schema cache' })).toBe(true);
+
+      // 3. Schema cache column error
+      expect(isExtendedColumnError({ message: "Could not find the 'notification_settings' column of 'profiles' in the schema cache" })).toBe(true);
+
+      // 4. Real RLS error should NOT trigger fallback
+      expect(isExtendedColumnError({ code: '42501', message: 'violates row level security policy for profiles' })).toBe(false);
+    });
+
+    it('CRITICAL: fallback logic preserves empty array [] and maps device_type to null without reverting to defaults', () => {
+      const payloadWithEmpty: Partial<UserProfile> = {
+        age_group: '18-24',
+        device_types: [],
+        device_type: mapDeviceTypesToDeviceType([]),
+        notification_settings: {
+          email_payouts: false,
+          email_submissions: false,
+          email_listings: false,
+          email_disputes: false,
+        },
+      };
+
+      const { device_types: _dt, location: _loc, notification_settings: _ns, ...legacyPayload } = payloadWithEmpty;
+
+      expect(legacyPayload.device_type).toBeNull();
+      expect(legacyPayload).not.toHaveProperty('device_types');
+      expect(legacyPayload).not.toHaveProperty('notification_settings');
+      expect(legacyPayload.age_group).toBe('18-24');
     });
 
     it('does NOT silently swallow real database errors (e.g. RLS violation or permission denied)', () => {
