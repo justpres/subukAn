@@ -7,7 +7,8 @@ import {
   isListingTargeted, 
   isProfileDemographicsIncomplete, 
   filterListingsByDemographics,
-  getUnmetDemographicRequirements 
+  getUnmetDemographicRequirements,
+  getFirstUnmetDemographicField
 } from '@/lib/utils/demographics';
 import { JobListing, getButtonConfig } from '@/lib/utils/claim-button';
 import { UserProfile } from '@/types';
@@ -481,12 +482,45 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
     it('formats various employment and tech experience labels correctly', () => {
       expect(getUnmetDemographicRequirements({ ...baseListing, target_employment_status: 'self-employed' }, null))
         .toEqual(['Employment: Self-Employed']);
+      expect(getUnmetDemographicRequirements({ ...baseListing, target_employment_status: 'self_employed' }, null))
+        .toEqual(['Employment: Self-Employed']);
       expect(getUnmetDemographicRequirements({ ...baseListing, target_tech_literacy: 'casual_user' }, null))
         .toEqual(['Tech Experience: Casual User']);
       expect(getUnmetDemographicRequirements({ ...baseListing, target_tech_literacy: 'student_dev' }, null))
         .toEqual(['Tech Experience: Developer']);
       expect(getUnmetDemographicRequirements({ ...baseListing, target_tech_literacy: 'advanced' }, null))
         .toEqual(['Tech Experience: Advanced']);
+    });
+
+    it('formats color_blind accessibility tag correctly', () => {
+      const colorBlindListing: JobListing = {
+        ...baseListing,
+        target_accessibility_tags: ['color_blind'],
+      };
+      expect(getUnmetDemographicRequirements(colorBlindListing, completeProfile)).toEqual(['Color Blind Required']);
+    });
+
+    it('matches gender case-insensitively', () => {
+      const femaleListing: JobListing = {
+        ...baseListing,
+        target_gender: 'Female',
+      };
+      expect(matchesDemographics(femaleListing, { gender: 'female' })).toBe(true);
+      expect(matchesDemographics(femaleListing, { gender: 'FEMALE' })).toBe(true);
+      expect(getUnmetDemographicRequirements(femaleListing, { gender: 'female' })).toEqual([]);
+    });
+
+    it('matches self_employed and self-employed symmetrically', () => {
+      const listingUnderscore: JobListing = {
+        ...baseListing,
+        target_employment_status: 'self_employed',
+      };
+      const listingHyphen: JobListing = {
+        ...baseListing,
+        target_employment_status: 'self-employed',
+      };
+      expect(matchesDemographics(listingUnderscore, { employment_status: 'self-employed' })).toBe(true);
+      expect(matchesDemographics(listingHyphen, { employment_status: 'self_employed' })).toBe(true);
     });
   });
 
@@ -565,9 +599,82 @@ describe('Listing Synchronization, Status Alignment & Demographic Visibility', (
       expect(unmatchedItem.is_demographic_matched).toBe(false);
       expect(unmatchedItem.unmet_demographics).toEqual(['Age: 18-24', 'Gender: Male']);
     });
+
+    it('prioritizes active user submission into matchedListings even if demographics differ', () => {
+      const activeClaimedTargeted: JobListing = {
+        ...baseListing,
+        id: 'in-progress-targeted',
+        target_age_group: '45+',
+        user_submission_status: 'in_progress',
+      };
+
+      const result = filterListingsByDemographics([activeClaimedTargeted], completeProfile); // profile is 25-34
+      expect(result.matchedListings.map(l => l.id)).toEqual(['in-progress-targeted']);
+      expect(result.matchedListings[0].is_demographic_matched).toBe(true);
+      expect(result.unmatchedListings).toEqual([]);
+      expect(result.unmatchedCount).toBe(0);
+    });
   });
 
-  describe('7. Realtime Listings Migration (00018_enable_listings_realtime.sql)', () => {
+  describe('7. First Unmet Demographic Field Pre-focus Helper', () => {
+    it('returns null when profile matches all criteria or listing has no targeting', () => {
+      expect(getFirstUnmetDemographicField(baseListing, completeProfile)).toBeNull();
+      expect(getFirstUnmetDemographicField({ ...baseListing, target_age_group: '25-34' }, completeProfile)).toBeNull();
+    });
+
+    it('identifies age_group as first unmet field when age differs', () => {
+      const listing: JobListing = {
+        ...baseListing,
+        target_age_group: '18-24',
+        target_gender: 'male',
+      };
+      expect(getFirstUnmetDemographicField(listing, completeProfile)).toBe('age_group');
+    });
+
+    it('identifies gender as first unmet field when age matches but gender differs', () => {
+      const listing: JobListing = {
+        ...baseListing,
+        target_age_group: '25-34',
+        target_gender: 'male',
+      };
+      expect(getFirstUnmetDemographicField(listing, completeProfile)).toBe('gender');
+    });
+
+    it('identifies employment_status when age and gender match but employment differs', () => {
+      const listing: JobListing = {
+        ...baseListing,
+        target_age_group: '25-34',
+        target_gender: 'female',
+        target_employment_status: 'student',
+      };
+      expect(getFirstUnmetDemographicField(listing, completeProfile)).toBe('employment_status');
+    });
+
+    it('identifies tech_literacy when other fields match', () => {
+      const listing: JobListing = {
+        ...baseListing,
+        target_age_group: '25-34',
+        target_gender: 'female',
+        target_employment_status: 'employed',
+        target_tech_literacy: 'student_dev',
+      };
+      expect(getFirstUnmetDemographicField(listing, completeProfile)).toBe('tech_literacy');
+    });
+
+    it('identifies accessibility when other fields match but tag is missing', () => {
+      const listing: JobListing = {
+        ...baseListing,
+        target_age_group: '25-34',
+        target_gender: 'female',
+        target_employment_status: 'employed',
+        target_tech_literacy: 'intermediate',
+        target_accessibility_tags: ['keyboard_only'],
+      };
+      expect(getFirstUnmetDemographicField(listing, completeProfile)).toBe('accessibility');
+    });
+  });
+
+  describe('8. Realtime Listings Migration (00018_enable_listings_realtime.sql)', () => {
     it('migration file exists on disk with valid SQL commands', () => {
       const migrationPath = path.resolve(process.cwd(), 'supabase/migrations/00018_enable_listings_realtime.sql');
       expect(fs.existsSync(migrationPath)).toBe(true);

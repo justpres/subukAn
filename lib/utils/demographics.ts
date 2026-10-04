@@ -39,17 +39,25 @@ export function matchesDemographics(
   if (listing.target_age_group && listing.target_age_group !== 'all' && listing.target_age_group !== profile?.age_group) {
     return false;
   }
-  if (listing.target_gender && listing.target_gender !== 'all' && listing.target_gender !== profile?.gender) {
+  if (
+    listing.target_gender &&
+    listing.target_gender !== 'all' &&
+    listing.target_gender.toLowerCase() !== profile?.gender?.toLowerCase()
+  ) {
     return false;
   }
-  if (listing.target_employment_status && listing.target_employment_status !== 'all' && listing.target_employment_status !== profile?.employment_status) {
+  if (
+    listing.target_employment_status &&
+    listing.target_employment_status !== 'all' &&
+    listing.target_employment_status.replace(/_/g, '-') !== profile?.employment_status?.replace(/_/g, '-')
+  ) {
     return false;
   }
   if (listing.target_tech_literacy && listing.target_tech_literacy !== 'all' && listing.target_tech_literacy !== profile?.tech_literacy) {
     return false;
   }
   if (listing.target_accessibility_tags && listing.target_accessibility_tags.length > 0) {
-    const testerTags = profile?.accessibility_tags || [];
+    const testerTags = Array.isArray(profile?.accessibility_tags) ? profile.accessibility_tags : [];
     const matchesAll = listing.target_accessibility_tags.every(tag => testerTags.includes(tag));
     if (!matchesAll) {
       return false;
@@ -84,9 +92,9 @@ export function getUnmetDemographicRequirements(
   if (
     listing.target_gender &&
     listing.target_gender !== 'all' &&
-    listing.target_gender !== profile?.gender
+    listing.target_gender.toLowerCase() !== profile?.gender?.toLowerCase()
   ) {
-    const genderLabel = listing.target_gender.charAt(0).toUpperCase() + listing.target_gender.slice(1);
+    const genderLabel = listing.target_gender.charAt(0).toUpperCase() + listing.target_gender.slice(1).toLowerCase();
     unmet.push(`Gender: ${genderLabel}`);
   }
 
@@ -94,10 +102,10 @@ export function getUnmetDemographicRequirements(
   if (
     listing.target_employment_status &&
     listing.target_employment_status !== 'all' &&
-    listing.target_employment_status !== profile?.employment_status
+    listing.target_employment_status.replace(/_/g, '-') !== profile?.employment_status?.replace(/_/g, '-')
   ) {
     let empLabel = listing.target_employment_status;
-    if (empLabel === 'self-employed') {
+    if (empLabel === 'self-employed' || empLabel === 'self_employed') {
       empLabel = 'Self-Employed';
     } else {
       empLabel = empLabel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -138,9 +146,9 @@ export function getUnmetDemographicRequirements(
 
   // 5. Accessibility Tags
   if (listing.target_accessibility_tags && listing.target_accessibility_tags.length > 0) {
-    const testerTags = profile?.accessibility_tags || [];
+    const testerTags = Array.isArray(profile?.accessibility_tags) ? profile.accessibility_tags : [];
     for (const tag of listing.target_accessibility_tags) {
-      if (!testerTags.includes(tag)) {
+      if (tag && !testerTags.includes(tag)) {
         let tagLabel: string;
         switch (tag) {
           case 'screen_reader':
@@ -152,6 +160,9 @@ export function getUnmetDemographicRequirements(
           case 'high_contrast':
             tagLabel = 'High Contrast Required';
             break;
+          case 'color_blind':
+            tagLabel = 'Color Blind Required';
+            break;
           default:
             tagLabel = `${tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} Required`;
             break;
@@ -162,6 +173,59 @@ export function getUnmetDemographicRequirements(
   }
 
   return unmet;
+}
+
+export type DemographicFieldKey = 'age_group' | 'gender' | 'employment_status' | 'tech_literacy' | 'accessibility';
+
+/**
+ * Returns the key of the first unmet demographic field for a listing, or null if all criteria match.
+ * Useful for pre-focusing the relevant input when opening ProfileModal.
+ */
+export function getFirstUnmetDemographicField(
+  listing: DemographicTargetFields,
+  profile: Partial<UserProfile> | null | undefined
+): DemographicFieldKey | null {
+  if (
+    listing.target_age_group &&
+    listing.target_age_group !== 'all' &&
+    listing.target_age_group !== profile?.age_group
+  ) {
+    return 'age_group';
+  }
+
+  if (
+    listing.target_gender &&
+    listing.target_gender !== 'all' &&
+    listing.target_gender.toLowerCase() !== profile?.gender?.toLowerCase()
+  ) {
+    return 'gender';
+  }
+
+  if (
+    listing.target_employment_status &&
+    listing.target_employment_status !== 'all' &&
+    listing.target_employment_status.replace(/_/g, '-') !== profile?.employment_status?.replace(/_/g, '-')
+  ) {
+    return 'employment_status';
+  }
+
+  if (
+    listing.target_tech_literacy &&
+    listing.target_tech_literacy !== 'all' &&
+    listing.target_tech_literacy !== profile?.tech_literacy
+  ) {
+    return 'tech_literacy';
+  }
+
+  if (Array.isArray(listing.target_accessibility_tags) && listing.target_accessibility_tags.length > 0) {
+    const testerTags = Array.isArray(profile?.accessibility_tags) ? profile.accessibility_tags : [];
+    const hasUnmetTag = listing.target_accessibility_tags.some(tag => Boolean(tag) && !testerTags.includes(tag));
+    if (hasUnmetTag) {
+      return 'accessibility';
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -183,6 +247,7 @@ export function isProfileDemographicsIncomplete(
 /**
  * Filters a list of job listings into matched listings and unmatched listings based on demographic profile.
  * Listings are decorated with is_demographic_matched and unmet_demographics.
+ * Active user submissions take precedence over demographic restrictions.
  */
 export function filterListingsByDemographics(
   listings: JobListing[],
@@ -192,7 +257,11 @@ export function filterListingsByDemographics(
   const unmatchedListings: JobListing[] = [];
 
   for (const listing of listings) {
-    const isMatched = matchesDemographics(listing, profile);
+    const hasActiveSubmission = Boolean(
+      listing.user_submission_status && listing.user_submission_status !== 'expired'
+    );
+    const matchesProfile = matchesDemographics(listing, profile);
+    const isMatched = hasActiveSubmission || matchesProfile;
     const unmet = isMatched ? [] : getUnmetDemographicRequirements(listing, profile);
     const decoratedListing: JobListing = {
       ...listing,

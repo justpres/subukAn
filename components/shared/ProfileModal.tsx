@@ -5,18 +5,29 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { UserProfile, NotificationSettings } from '@/types'
 import { mapDeviceTypesToDeviceType, resolveInitialDeviceTypes, resolveInitialNotificationSettings } from '@/lib/utils/profile'
-import { User, Check, X, Shield, Smartphone, MapPin, Briefcase, Laptop, AlertCircle, Lock, FileText, ExternalLink, ShieldCheck } from 'lucide-react'
+import { User, Check, X, Shield, Smartphone, MapPin, Briefcase, Laptop, AlertCircle, Lock, FileText, ExternalLink, ShieldCheck, Target } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { modalBackdropVariants, modalContentVariants } from '@/lib/utils/motion'
 
-interface ProfileModalProps {
+export interface ProfileModalProps {
   isOpen: boolean
   onClose: () => void
   profile: Partial<UserProfile> | null
   onSaveProfile: (updatedData: Partial<UserProfile>) => Promise<void> | void
+  initialTab?: 'demographics' | 'payout' | 'notifications' | 'privacy'
+  focusField?: 'age_group' | 'gender' | 'employment_status' | 'tech_literacy' | 'accessibility' | null
+  unmetRequirements?: string[]
 }
 
-export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: ProfileModalProps) {
+export function ProfileModal({
+  isOpen,
+  onClose,
+  profile,
+  onSaveProfile,
+  initialTab,
+  focusField,
+  unmetRequirements
+}: ProfileModalProps) {
   const [ageGroup, setAgeGroup] = useState('')
   const [gender, setGender] = useState('')
   const [location, setLocation] = useState('')
@@ -54,6 +65,8 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
       return
     }
 
+    setActiveTab(initialTab || 'demographics')
+
     // Only initialize form state when the modal transitions to open (or when profile first arrives while open)
     // Background polling and refetches while the modal is open will not overwrite user edits
     if (!initializedRef.current && profile) {
@@ -73,7 +86,38 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
       setSaveSuccess(false)
       initializedRef.current = true
     }
-  }, [isOpen, profile])
+
+    if (focusField) {
+      const timer = setTimeout(() => {
+        let elementId = ''
+        switch (focusField) {
+          case 'age_group':
+            elementId = 'profile-age-group'
+            break
+          case 'gender':
+            elementId = 'profile-gender'
+            break
+          case 'employment_status':
+            elementId = 'profile-employment'
+            break
+          case 'tech_literacy':
+            elementId = 'profile-tech-literacy'
+            break
+          case 'accessibility':
+            elementId = 'profile-accessibility-tags'
+            break
+        }
+        if (elementId) {
+          const el = document.getElementById(elementId)
+          if (el) {
+            el.focus()
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }
+      }, 150)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, profile, initialTab, focusField])
 
   if (!mounted) return null
 
@@ -242,6 +286,25 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
 
               {activeTab === 'demographics' && (
                 <div id="demographics-panel" role="tabpanel" aria-labelledby="demographics-tab" className="space-y-4">
+                  {unmetRequirements && unmetRequirements.length > 0 && (
+                    <div className="p-3 bg-purple-50/90 border border-purple-200 rounded-[8px] text-xs space-y-1.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                        <Target className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span>Demographics needed to qualify for targeted campaign:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {unmetRequirements.map((req, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-white text-purple-800 border border-purple-200/90 font-mono shadow-2xs"
+                          >
+                            {req}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Age Range & Gender */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -366,7 +429,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSaveProfile }: Profil
                   </div>
 
                   {/* Accessibility Accommodations */}
-                  <div>
+                  <div id="profile-accessibility-tags" tabIndex={-1} className="outline-none">
                     <label className="block text-xs font-bold text-gray-700 mb-2">
                       Accessibility Specialty Accommodations
                     </label>

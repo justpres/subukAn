@@ -33,7 +33,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { sanitizeDatabaseError } from '@/lib/utils/error'
 import { JobListing, getButtonConfig } from '@/lib/utils/claim-button'
 import { formatRejectionReason, formatDisputeReason } from '@/lib/utils/workspace-status'
-import { filterListingsByDemographics, isProfileDemographicsIncomplete, isListingTargeted, getUnmetDemographicRequirements } from '@/lib/utils/demographics'
+import { filterListingsByDemographics, isProfileDemographicsIncomplete, isListingTargeted, getUnmetDemographicRequirements, getFirstUnmetDemographicField, DemographicFieldKey } from '@/lib/utils/demographics'
 import { UserProfile } from '@/types'
 import dynamic from 'next/dynamic'
 import { LineChart } from '@tremor/react'
@@ -146,6 +146,22 @@ function TesterDashboardContent() {
 
   // Settings & Dispute modals state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [profileFocusField, setProfileFocusField] = useState<DemographicFieldKey | null>(null)
+  const [modalUnmetRequirements, setModalUnmetRequirements] = useState<string[]>([])
+
+  const handleOpenProfileForListing = (job: JobListing, unmet: string[]) => {
+    const firstField = getFirstUnmetDemographicField(job, profile)
+    setProfileFocusField(firstField)
+    setModalUnmetRequirements(unmet)
+    setIsProfileModalOpen(true)
+  }
+
+  const handleOpenGeneralProfile = () => {
+    setProfileFocusField(null)
+    setModalUnmetRequirements([])
+    setIsProfileModalOpen(true)
+  }
+
   const [disputeModalState, setDisputeModalState] = useState<{
     isOpen: boolean
     submissionId: string
@@ -451,8 +467,9 @@ function TesterDashboardContent() {
         try {
           const { data: userSubsData } = await supabase
             .from('submissions')
-            .select('id, listing_id, status')
+            .select('id, listing_id, status, created_at')
             .eq('tester_id', user.id)
+            .order('created_at', { ascending: false })
 
           if (userSubsData) {
             userSubmissions = userSubsData
@@ -780,7 +797,7 @@ function TesterDashboardContent() {
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
           <button
-            onClick={() => setIsProfileModalOpen(true)}
+            onClick={handleOpenGeneralProfile}
             className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-2"
           >
             <User className="w-3.5 h-3.5 text-slate-500" />
@@ -922,7 +939,7 @@ function TesterDashboardContent() {
               <div className="pt-1">
                 <button
                   type="button"
-                  onClick={() => setIsProfileModalOpen(true)}
+                  onClick={handleOpenGeneralProfile}
                   className="px-4 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow-xs transition-colors"
                 >
                   Update Demographics Profile
@@ -950,7 +967,7 @@ function TesterDashboardContent() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setIsProfileModalOpen(true)}
+                    onClick={handleOpenGeneralProfile}
                     className="px-3.5 py-1.5 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold rounded-lg text-xs transition-colors shrink-0 shadow-xs self-start sm:self-auto"
                   >
                     Update Profile
@@ -1041,20 +1058,15 @@ function TesterDashboardContent() {
                       </span>
                       {isUnmatched ? (
                         <div className="flex items-center gap-2">
+                          <span className="hidden lg:inline-flex px-2.5 py-1.5 text-xs font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded-lg font-mono">
+                            {btnConfig.text}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => setIsProfileModalOpen(true)}
+                            onClick={() => handleOpenProfileForListing(job, unmetRequirements)}
                             className="px-3.5 py-2 bg-[#2955E3] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow-xs transition-colors shrink-0"
                           >
                             Update Demographics
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsProfileModalOpen(true)}
-                            title="Click to update demographics profile"
-                            className={`hidden md:inline-flex px-3.5 py-2 font-bold text-xs rounded-lg border text-center transition-all shadow-xs ${btnConfig.className}`}
-                          >
-                            {btnConfig.text}
                           </button>
                         </div>
                       ) : (
@@ -1373,9 +1385,16 @@ function TesterDashboardContent() {
       {/* Profile Settings Modal */}
       <ProfileModal
         isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
+        onClose={() => {
+          setIsProfileModalOpen(false)
+          setProfileFocusField(null)
+          setModalUnmetRequirements([])
+        }}
         profile={profile}
         onSaveProfile={handleUpdateProfile}
+        initialTab="demographics"
+        focusField={profileFocusField}
+        unmetRequirements={modalUnmetRequirements}
       />
 
       {/* Dispute Modal */}
